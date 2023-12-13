@@ -1,0 +1,230 @@
+/* global crypto */
+// https://github.com/boogie/mcumgr-web/blob/main/js/mcumgr.js
+
+import { CBOR } from './cbor.js'
+
+export const constants = {
+  // Opcodes
+  MGMT_OP_READ: 0,
+  MGMT_OP_READ_RSP: 1,
+  MGMT_OP_WRITE: 2,
+  MGMT_OP_WRITE_RSP: 3,
+
+  // Groups
+  MGMT_GROUP_ID_OS: 0,
+  MGMT_GROUP_ID_IMAGE: 1,
+  MGMT_GROUP_ID_STAT: 2,
+  MGMT_GROUP_ID_CONFIG: 3,
+  MGMT_GROUP_ID_LOG: 4,
+  MGMT_GROUP_ID_CRASH: 5,
+  MGMT_GROUP_ID_SPLIT: 6,
+  MGMT_GROUP_ID_RUN: 7,
+  MGMT_GROUP_ID_FS: 8,
+  MGMT_GROUP_ID_SHELL: 9,
+
+  // OS group
+  OS_MGMT_ID_ECHO: 0,
+  OS_MGMT_ID_CONS_ECHO_CTRL: 1,
+  OS_MGMT_ID_TASKSTAT: 2,
+  OS_MGMT_ID_MPSTAT: 3,
+  OS_MGMT_ID_DATETIME_STR: 4,
+  OS_MGMT_ID_RESET: 5,
+
+  // Image group
+  IMG_MGMT_ID_STATE: 0,
+  IMG_MGMT_ID_UPLOAD: 1,
+  IMG_MGMT_ID_FILE: 2,
+  IMG_MGMT_ID_CORELIST: 3,
+  IMG_MGMT_ID_CORELOAD: 4,
+  IMG_MGMT_ID_ERASE: 5
+}
+
+export class MCUManager {
+  constructor (di = {}) {
+    this._mtu = 200
+    this._messageCallback = null
+    this._imageUploadProgressCallback = null
+    this._imageUploadNextCallback = null
+    this._uploadIsInProgress = false
+    this._buffer = new Uint8Array()
+    this._logger = di.logger || { info: console.log, error: console.error }
+    this._seq = 0
+  }
+
+  onMessage (callback) {
+    this._messageCallback = callback
+    return this
+  }
+
+  onImageUploadNext (callback) {
+    this._imageUploadNextCallback = callback
+    return this
+  }
+
+  onImageUploadProgress (callback) {
+    this._imageUploadProgressCallback = callback
+    return this
+  }
+
+  onImageUploadFinished (callback) {
+    this._imageUploadFinishedCallback = callback
+    return this
+  }
+
+  _getMessage (op, group, id, data) {
+    const _flags = 0
+    let encodedData = []
+    if (typeof data !== 'undefined') {
+      encodedData = [...new Uint8Array(CBOR.encode(data))]
+    }
+    const lengthLo = encodedData.length & 255
+    const lengthHi = encodedData.length >> 8
+    const groupLo = group & 255
+    const groupHi = group >> 8
+    const message = [op, _flags, lengthHi, lengthLo, groupHi, groupLo, this._seq, id, ...encodedData]
+    this._seq = (this._seq + 1) % 256
+
+    return message
+  }
+
+  _notification (buffer) {
+    const message = new Uint8Array(buffer)
+    this._buffer = new Uint8Array([...this._buffer, ...message])
+    const messageLength = this._buffer[2] * 256 + this._buffer[3]
+    if (this._buffer.length < messageLength + 8) return
+    this._processMessage(this._buffer.slice(0, messageLength + 8))
+    this._buffer = this._buffer.slice(messageLength + 8)
+  }
+
+  _processMessage (message) {
+    const [op, , lengthHi, lengthLo, groupHi, groupLo, , id] = message
+    const data = CBOR.decode(message.slice(8).buffer)
+    const length = lengthHi * 256 + lengthLo
+    const group = groupHi * 256 + groupLo
+
+    console.log('mcumgr - Process Message - Group: ' + group + ', Id: ' + id + ', Off: ' + data.off)
+    if (group === constants.MGMT_GROUP_ID_IMAGE && id === constants.IMG_MGMT_ID_UPLOAD && data.off) {
+      this._uploadOffset = data.off
+      this._uploadNext()
+      return
+    }
+    if (this._messageCallback) this._messageCallback({ op, group, id, data, length })
+  }
+
+  cmdReset () {
+    return this._getMessage(constants.MGMT_OP_WRITE, constants.MGMT_GROUP_ID_OS, constants.OS_MGMT_ID_RESET)
+  }
+
+  smpEcho (message) {
+    return this._getMessage(constants.MGMT_OP_WRITE, constants.MGMT_GROUP_ID_OS, constants.OS_MGMT_ID_ECHO, { d: message })
+  }
+
+  cmdImageState () {
+    return this._getMessage(constants.MGMT_OP_READ, constants.MGMT_GROUP_ID_IMAGE, constants.IMG_MGMT_ID_STATE)
+  }
+
+  cmdImageErase () {
+    return this._getMessage(constants.MGMT_OP_WRITE, constants.MGMT_GROUP_ID_IMAGE, constants.IMG_MGMT_ID_ERASE, {})
+  }
+
+  cmdImageTest (hash) {
+    return this._getMessage(constants.MGMT_OP_WRITE, constants.MGMT_GROUP_ID_IMAGE, constants.IMG_MGMT_ID_STATE, { hash, confirm: false })
+  }
+
+  cmdImageConfirm (hash) {
+    return this._getMessage(constants.MGMT_OP_WRITE, constants.MGMT_GROUP_ID_IMAGE, constants.IMG_MGMT_ID_STATE, { hash, confirm: true })
+  }
+
+  _hash (image) {
+    return crypto.subtle.digest('SHA-256', image)
+  }
+
+  async _uploadNext () {
+    if (this._uploadOffset >= this._uploadImage.byteLength) {
+      this._uploadIsInProgress = false
+      this._imageUploadFinishedCallback()
+      return
+    }
+
+    const nmpOverhead = 8
+    const message = { data: new Uint8Array(), off: this._uploadOffset }
+    if (this._uploadOffset === 0) {
+      message.len = this._uploadImage.byteLength
+      message.sha = new Uint8Array(await this._hash(this._uploadImage))
+    }
+    this._imageUploadProgressCallback({ percentage: Math.floor(this._uploadOffset / this._uploadImage.byteLength * 100) })
+
+    const length = this._mtu - CBOR.encode(message).byteLength - nmpOverhead
+
+    message.data = new Uint8Array(this._uploadImage.slice(this._uploadOffset, this._uploadOffset + length))
+
+    this._uploadOffset += length
+
+    const packet = this._getMessage(constants.MGMT_OP_WRITE, constants.MGMT_GROUP_ID_IMAGE, constants.IMG_MGMT_ID_UPLOAD, message)
+
+    console.log('mcumgr - _uploadNext: Message Length: ' + packet.length)
+
+    this._imageUploadNextCallback({ packet })
+  }
+
+  async cmdUpload (image, slot = 0) {
+    if (this._uploadIsInProgress) {
+      this._logger.error('Upload is already in progress.')
+      return
+    }
+    this._uploadIsInProgress = true
+
+    this._uploadOffset = 0
+    this._uploadImage = image
+    this._uploadSlot = slot
+
+    this._uploadNext()
+  }
+
+  async imageInfo (image) {
+    const info = {}
+    const view = new Uint8Array(image)
+
+    // check header length
+    if (view.length < 32) {
+      throw new Error('Invalid image (too short file)')
+    }
+
+    // check MAGIC bytes 0x96f3b83d
+    if (view[0] !== 0x3d || view[1] !== 0xb8 || view[2] !== 0xf3 || view[3] !== 0x96) {
+      throw new Error('Invalid image (wrong magic bytes)')
+    }
+
+    // check load address is 0x00000000
+    if (view[4] !== 0x00 || view[5] !== 0x00 || view[6] !== 0x00 || view[7] !== 0x00) {
+      throw new Error('Invalid image (wrong load address)')
+    }
+
+    const headerSize = view[8] + view[9] * 2 ** 8
+
+    // check protected TLV area size is 0
+    if (view[10] !== 0x00 || view[11] !== 0x00) {
+      throw new Error('Invalid image (wrong protected TLV area size)')
+    }
+
+    const imageSize = view[12] + view[13] * 2 ** 8 + view[14] * 2 ** 16 + view[15] * 2 ** 24
+    info.imageSize = imageSize
+
+    // check image size is correct
+    if (view.length < imageSize + headerSize) {
+      throw new Error('Invalid image (wrong image size)')
+    }
+
+    // check flags is 0x00000000
+    if (view[16] !== 0x00 || view[17] !== 0x00 || view[18] !== 0x00 || view[19] !== 0x00) {
+      throw new Error('Invalid image (wrong flags)')
+    }
+
+    const version = `${view[20]}.${view[21]}.${view[22] + view[23] * 2 ** 8}`
+    info.version = version
+
+    info.hash = [...new Uint8Array(await this._hash(image.slice(0, imageSize + 32)))].map(b => b.toString(16).padStart(2, '0')).join('')
+
+    return info
+  }
+}
