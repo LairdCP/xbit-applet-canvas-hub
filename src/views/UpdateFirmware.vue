@@ -10,26 +10,32 @@
       </button>
     </h3>
     <div class="m-2" v-show="showAdvanced">
-      <button class="bg-canvas-slate-600 text-white p-2 m-2 rounded disabled:opacity-25" :disabled="settingUpSmp" @click="setupSmp">
+      <button class="bg-canvas-slate-600 text-white p-2 m-2 rounded disabled:opacity-25"
+        :disabled="firmwareUpdateStore.states[0].busy || !firmwareUpdateStore.states[0].ready"
+        @click="firmwareUpdateStore.setupSmp">
         <i class="fa-solid fa-arrows-rotate"
          :class="{
-          'fa-spin': settingUpSmp,
+          'fa-spin': firmwareUpdateStore.states[0].busy,
          }"></i>
-        Detect SMP
+        {{ firmwareUpdateStore.states[0].actionText }}
       </button>
-      <button class="bg-canvas-slate-600 text-white p-2 m-2 rounded disabled:opacity-25" :disabled="readingImageState" @click="readImageState">
+      <button class="bg-canvas-slate-600 text-white p-2 m-2 rounded disabled:opacity-25"
+        :disabled="firmwareUpdateStore.states[1].busy || !firmwareUpdateStore.states[1].ready"
+        @click="firmwareUpdateStore.readImageState">
         <i class="fa-solid fa-arrows-rotate"
          :class="{
-          'fa-spin': readingImageState,
+          'fa-spin': firmwareUpdateStore.states[1].busy,
          }"></i>
-        Read Image State
+        {{ firmwareUpdateStore.states[1].actionText }}
       </button>
-      <button class="bg-canvas-slate-600 text-white p-2 m-2 rounded disabled:opacity-25" @click="imageTest" :disabled="testButtonDisabled || testingImageState">
+      <button class="bg-canvas-slate-600 text-white p-2 m-2 rounded disabled:opacity-25"
+        :disabled="firmwareUpdateStore.states[3].busy || !firmwareUpdateStore.states[3].ready"
+        @click="firmwareUpdateStore.imageTest">
         <i class="fa-solid fa-arrows-rotate"
          :class="{
-          'fa-spin': testingImageState,
+          'fa-spin': firmwareUpdateStore.states[3].busy,
          }"></i>
-        Test Image
+        {{ firmwareUpdateStore.states[3].actionText }}
       </button>
       <button class="bg-canvas-slate-600 text-white p-2 m-2 rounded disabled:opacity-25" @click="imageConfirm" :disabled="confirmButtonDisabled || confirmingImageState">
         Image Confirm
@@ -46,9 +52,11 @@
       </button>
     </div>
     <div class="flex flex-row w-full">
-      <div v-for="image in images" :key="image.slot" class="p-2 m-2 text-white bg-canvas-slate-700 grow">
+      <div v-for="image in firmwareUpdateStore.images" :key="image.slot" class="p-2 m-2 text-white bg-canvas-slate-700 grow">
         <h3><i class="fa-solid fa-microchip py-2 my-2"></i> Slot {{ image.slot + 1 }} 
-          <button v-if="image.slot === 1 && !uploading && !image.empty" class="bg-canvas-slate-600 text-white p-2 m-2 rounded disabled:opacity-25 float-right" @click="imageErase" :disabled="eraseButtonDisabled || erasingImage">
+          <button v-if="image.slot === 1 && !uploading && !image.empty"
+            class="bg-canvas-slate-600 text-white p-2 m-2 rounded disabled:opacity-25 float-right"
+            @click="firmwareUpdateStore.imageErase" :disabled="firmwareUpdateStore.states[5].busy">
             <i class="fa-solid fa-trash-can"></i>
           </button>
         </h3>
@@ -69,11 +77,14 @@
             }"></i></div>
         </div>
         <div v-if="image.slot === 1" class="mt-2">
-          <button v-if="!image.pending && !image.empty" class="bg-canvas-slate-600 text-white p-2 mb-2 rounded cursor-pointer block w-full text-center disabled:opacity-25" @click="imageTest" :disabled="testButtonDisabled || testingImageState">
+          <!-- <button 
+            v-if="!image.pending && !image.empty"
+            class="bg-canvas-slate-600 text-white p-2 mb-2 rounded cursor-pointer block w-full text-center disabled:opacity-25"
+            @click="firmwareUpdateStore.imageTest">
             Set Pending
-          </button>
+          </button> -->
           <label class="bg-canvas-slate-600 text-white p-2 rounded cursor-pointer block text-center" for="fileInput" @click="filePicker"><i class="fa-solid fa-file-code"></i> Image</label>
-          <input type="file" id="fileInput" @change="selectFile" class="hidden" accept=".bin">
+          <input type="file" id="fileInput" @change="firmwareUpdateStore.selectFile" class="hidden" accept=".bin">
         </div>
       </div>
     </div>
@@ -93,16 +104,23 @@
         <div>Image Size: {{ selectedFile.imageSize }}</div>
       </div>
     </Transition>
-    <div class="text-white m-2 p-2 bg-canvas-sky-700" v-if="progressInfo">
-      <i v-if="uploading" class="fa-solid fa-spinner fa-spin"></i>
-      {{ progressInfo }}
+    <div class="text-white m-2 p-2 bg-canvas-sky-700" v-if="firmwareUpdateStore.currentState.progressText && firmwareUpdateStore.currentState.busy">
+      <i class="fa-solid fa-spinner fa-spin"></i>
+      {{ firmwareUpdateStore.currentState.progressText }}
     </div>
+    <div class="text-white m-2 p-2 bg-canvas-sky-700" v-else>
+      {{ firmwareUpdateStore.currentState.infoText }}
+    </div>
+    <!-- <div class="text-white">
+      {{ firmwareUpdateStore.currentState }}
+    </div> -->
   </div>
   <div class="action-button btn-gradient-1">
-    <button @click="firmwareAction()"
-      class="bg-canvas-slate-800 text-white p-4 w-full h-full disabled:opacity-25"
-      :disabled="updateFirmwareActionDisabled()">
-      {{ updateFirmwareAction }}
+    <button @click="stateAction()"
+      class="bg-canvas-slate-800 text-white p-4 w-full h-full disabled:opacity-25 cursor-pointer"
+      :disabled="firmwareUpdateStore.currentState.busy || !firmwareUpdateStore.currentState.ready"
+      >
+      {{ firmwareUpdateStore.currentState.actionText }}
     </button>
   </div>
 
@@ -112,7 +130,8 @@
 import { defineComponent } from 'vue'
 import { xbit } from '@bennybtl/xbit-lib'
 import { useDevicesStore } from '@/stores/devices-store'
-import { MCUManager, constants } from '@/assets/mcumgr'
+import { constants } from '@/assets/mcumgr'
+import { useFirmwareUpdateStore } from '@/stores/firmware-update.store'
 
 // create a variable to hold the firmware data
 // we don't need to store this in the component data as it's huge
@@ -122,10 +141,9 @@ export default defineComponent({
   name: 'HomeView',
   setup () {
     const GUID_SMP = 'DA2E7828-FBCE-4E01-AE9E-261174997C48'
-    const mcumgr = new MCUManager()
     return {
       xbit,
-      mcumgr,
+      firmwareUpdateStore: useFirmwareUpdateStore(),
       GUID_SMP,
       devicesStore: useDevicesStore()
     }
@@ -160,93 +178,30 @@ export default defineComponent({
       this.$router.push({ name: 'home' })
     }
 
-    this.mcumgr.onMessage(async ({ op, group, id, data, length }) => {
-      switch (group) {
-        case constants.MGMT_GROUP_ID_OS:
-          switch (id) {
-            case constants.OS_MGMT_ID_ECHO:
-              alert(data.r)
-              break
-            case constants.OS_MGMT_ID_TASKSTAT:
-              console.table(data.tasks)
-              break
-            case constants.OS_MGMT_ID_MPSTAT:
-              console.log(data)
-              break
-          }
-          break
-        case constants.MGMT_GROUP_ID_IMAGE:
-          switch (id) {
-            case constants.IMG_MGMT_ID_STATE:
-              this.readingImageState = false
-              this.testingImageState = false
-              this.confirmingImageState = false
-
-              this.images = data.images
-              this.testButtonDisabled = !(data.images.length > 1 && data.images[1].pending === false)
-              this.confirmButtonDisabled = !(data.images.length > 0 && data.images[0].confirmed === false)
-              if (this.images.length === 1) {
-                this.progressInfo = 'Select a firmware file to upload to slot 2'
-                this.updateFirmwareAction = 'Upload Image'
-                this.images.push({
-                  slot: 1,
-                  empty: true,
-                  version: 'Empty',
-                  pending: false,
-                  confirmed: false,
-                  bootable: false
-                })
-              } else if (data.images.length === 2 && data.images[1].bootable)  {
-                this.progressInfo = 'Slot 2 has an image. Click "Test Image" to test it or upload a different image.'
-                this.updateFirmwareAction = 'Test Image'
-              } else {
-                this.progressInfo = 'Slot 2 has an invalid image. Click "Erase Image" to erase it or upload a different image.'
-              }
-              break
-          }
-          break
-        default:
-          console.log('Unknown group')
-          break
-      }
-
-    })
-
-    this.mcumgr.onImageUploadNext(async({ packet }) => {
-      return await xbit.sendBleWriteCommand({
-        data: packet,
-        uuid: this.GUID_SMP,
-        deviceId: this.devicesStore.connected
+    this.firmwareUpdateStore.mcumgr.onMessage(async ({ op, group, id, data, length }) => {
+        switch (group) {
+          case constants.MGMT_GROUP_ID_OS:
+            switch (id) {
+              case constants.OS_MGMT_ID_ECHO:
+                alert(data.r)
+                break
+              case constants.OS_MGMT_ID_TASKSTAT:
+                console.table(data.tasks)
+                break
+              case constants.OS_MGMT_ID_MPSTAT:
+                console.log(data)
+                break
+            }
+            break
+          case constants.MGMT_GROUP_ID_IMAGE:
+            switch (id) {
+              case constants.IMG_MGMT_ID_STATE: 
+                this.firmwareUpdateStore.processReadStateResponse(data)
+            }
+          }  
       })
-    })
-
-    this.mcumgr.onImageUploadProgress(({ percentage }) => {
-      this.progressInfo = 'Uploading... ' + percentage + '%'
-      // TODO update progress bar
-    })
-
-    this.mcumgr.onImageUploadFinished(async () => {
-      this.uploading = false
-      this.progressInfo = 'Upload complete'
-      await this.readImageState()
-
-      // clear selected file
-      this.deselectFile()
-
-      this.progressInfo = 'Upload complete. Marking image as pending...'
-      await this.imageTest()
-      this.progressInfo = 'Upload complete. Resetting to swap to new image....'
-      this.reset()
-    })
 
     this.jsonDataListener = (event) => {
-      console.log('UpdateFirmware.vue jsonDataListener', event)
-  
-      if (event.method === 'bluetoothNotificationReceived' &&
-        event.params.uuid.toLowerCase() === this.smpCharId.toLowerCase()) {
-        this.mcumgr._notification(event.params.data)
-      }
-
       // Mobile app responds to file picker with this event
       if (event.method === 'filePickerSelected') {
         const event = {
@@ -269,7 +224,8 @@ export default defineComponent({
 
     // watch for device to disconnect and go back to home
     this.$watch('devicesStore.connected', async (val) => {
-      if (this.resetting) return
+      // if resetting
+      if (this.firmwareUpdateStore.states[4].busy) return
       if (!val) {
         // set notification error
         xbit.sendToast({
@@ -289,16 +245,22 @@ export default defineComponent({
       }
     })
 
-    try {
-      await this.setupSmp()
-    } catch (e) {
-    // if no SMP found, display error
-      return console.log('error setting up SMP', e)
-    }
-    await this.readImageState()
+    // auto-advance the state machine
+    this.$watch('firmwareUpdateStore.state', async (val) => {
+      console.log('state changed', val)
+      if (this.showAdvanced) return
+      if (val === 0) {
+        // advance to next state
+        this.stateAction()
+      } else if (val === 1) {
+        this.stateAction()
+      }
+    })
+    this.firmwareUpdateStore.setState(0)
   },
   async beforeRouteLeave () {
     xbit.removeEventListener('jsonData', this.jsonDataListener)
+
     if (this.uploading) {
       xbit.sendToast({
         type: 'error',
@@ -306,6 +268,7 @@ export default defineComponent({
       })
       return false
     }
+
     if (this.devicesStore.connected) {
       // disconnect from the device
       const connected = await this.devicesStore.disconnectDevice()
@@ -314,70 +277,60 @@ export default defineComponent({
         // display error
       }
     }
+    // reset the state machine for next time
+    this.firmwareUpdateStore.resetStateMachine()
   },
   methods: {
-    updateFirmwareActionDisabled () {
-      if (this.pendingFile && !this.uploading) return false
-      if (this.pendingFile || this.selectedFile) return false
-      return true
-    },
-    async readImageState () {
-      this.progressInfo = 'Reading image state...'
-      this.readingImageState = true
-      // read the current version from the device
-      return await xbit.sendBleWriteCommand({
-        data: this.mcumgr.cmdImageState(),
-        uuid: this.smpCharId,
-        deviceId: this.devicesStore.connected
-      })
-    },
-    async imageTest () {
-      if (this.images.length > 1 && this.images[1].pending === false) {
-        const data = this.mcumgr.cmdImageTest(this.images[1].hash)
-        // after upload a version, send this command to test it
-        return await xbit.sendBleWriteCommand({
-          data,
-          uuid: this.smpCharId,
-          deviceId: this.devicesStore.connected
-        })
-      }
-    },
-    async imageConfirm () {
-      if (this.images.length > 0 && this.images[0].confirmed === false) {
-        const data = this.mcumgr.cmdImageConfirm(this.images[0].hash)
+    async stateAction() {
+      if (this.firmwareUpdateStore.state === 0) {
+        try {
+          // detect if smp capable device
+          await this.firmwareUpdateStore.detectSmp()
+          this.nextState()
+        } catch (e) {
+          console.log('error detecting  SMP', e)
+        }
+      } else if (this.firmwareUpdateStore.state === 1) {
+        try {
+          await this.firmwareUpdateStore.readImageState()
+          // next state is set based on the image state
+          // to 2, 3, 4 or 5
+        } catch (e) {
+          console.log('error reading image state', e)
+        }
 
-        // after confirm, send this command to apply it
-        return await xbit.sendBleWriteCommand({
-          data,
-          uuid: this.smpCharId,
-          deviceId: this.devicesStore.connected
-        })
+      } else if (this.firmwareUpdateStore.state === 2) {
+        this.firmwareUpdateStore.imageUpload()
+      } else if (this.firmwareUpdateStore.state === 3) {
+        this.firmwareUpdateStore.imageTest()
+      } else if (this.firmwareUpdateStore.state === 4) {
+        this.reset()
+      } else if (this.firmwareUpdateStore.state === 5) {
+        this.firmwareUpdateStore.eraseImage()
+      } else if (this.firmwareUpdateStore.state === 6) {
+        this.firmwareUpdateStore.imageConfirm()
+      } else if (this.firmwareUpdateStore.state === 7) {
+        // done, disconnect
       }
     },
-    async imageErase () {
-      this.erasingImage = true
-      // after confirm, send this command to apply it
-      await xbit.sendBleWriteCommand({
-        data: this.mcumgr.cmdImageErase(),
-        uuid: this.smpCharId,
-        deviceId: this.devicesStore.connected
-      })
-      this.erasingImage = false
-      await this.readImageState()
+    nextState() {
+      this.firmwareUpdateStore.setState(this.firmwareUpdateStore.state + 1)
     },
     async reset () {
+      if (this.firmwareUpdateStore.state !== 4) return
       xbit.sendToast({
         message: 'Resetting... Please wait.',
         options: { autoClose: false }
       })
 
-      this.resetting = true
-      this.progressInfo = 'The device is resetting and swapping firmware images. It will attempt to boot the new image, and if not successful, will revert to the previous image. This may take up to 2 minutes.'
-      this.updateFirmwareAction = 'Resetting...'
+      // this.resetting = true
+      this.firmwareUpdateStore.currentState.busy = true
+      // this.progressInfo = 'The device is resetting and swapping firmware images. It will attempt to boot the new image, and if not successful, will revert to the previous image. This may take up to 2 minutes.'
+      // this.updateFirmwareAction = 'Resetting...'
 
       await xbit.sendBleWriteCommand({
-        data: this.mcumgr.cmdReset(),
-        uuid: this.smpCharId,
+        data: this.firmwareUpdateStore.mcumgr.cmdReset(),
+        uuid: this.firmwareUpdateStore.smpCharId,
         deviceId: this.devicesStore.connected
       })
       await this.devicesStore.startScanning(120 * 1000)
@@ -386,9 +339,7 @@ export default defineComponent({
         // watch devices for the device to come back
         const timeout = setTimeout(async () => {
           await this.devicesStore.stopScanning(device)
-          this.resetting = false
-          this.progressInfo = ''
-          this.updateFirmwareAction = ''
+          this.firmwareUpdateStore.currentState.busy = false
           // TODO Reset timed out. What to do?
           reject()
         }, 120 * 1000)
@@ -399,25 +350,13 @@ export default defineComponent({
               clearInterval(watchDevicesInterval)
               clearTimeout(timeout)
 
-              this.resetting = false
-              this.progressInfo = ''
-              this.updateFirmwareAction = ''
+              this.firmwareUpdateStore.currentState.busy = false
               try {
                 await this.devicesStore.stopScanning(device)
                 await this.devicesStore.connectDevice(device)
-                await this.setupSmp()
-                await this.readImageState()
-                if (data.images.length > 1) {
-                  if (data.images[0].version === this.selectedFile.version) {
-                    // send confirm
-                      this.progressInfo = 'New image booted. Confirming image...'
-                      await this.imageConfirm()
-                    }
-                  } else if (data.images[1].version === this.selectedFile.version) {
-                    // send confirm
-                    this.progressInfo = 'New image was not booted successfully.'
-                    this.deselectFile()
-                }
+
+                this.firmwareUpdateStore.setState(0)
+
               } catch (e) {
                 console.log('error resetting', e)
               }
@@ -428,111 +367,19 @@ export default defineComponent({
         }, 1000)
       })
     },
-    async setupSmp () {
-      this.settingUpSmp = true
-      const dictionaryResponse = await xbit.sendBleGetGattDictionaryCommand({
-        deviceId: this.devicesStore.connected
-      })
-
-      this.smpCharId = null
-      for (const service in dictionaryResponse.j) {
-        if (dictionaryResponse.j[service].UUID.toUpperCase() === '8D53DC1D-1DB7-4CD3-868B-8A527460AA84') {
-          for (const characteristic in dictionaryResponse.j[service]) {
-            if (/^Characteristic/.test(characteristic) &&
-              dictionaryResponse.j[service][characteristic].UUID) {
-              if (dictionaryResponse.j[service][characteristic].UUID.toUpperCase() === this.GUID_SMP) {
-                this.smpCharId = this.GUID_SMP
-                break;
-              }
-            }
-          }
-        }
-      }
-
-      if (!this.smpCharId) {
-        return Promise.reject(new Error('SMP not found'))
-      }
-
-      // Skip this as it's not supported on mobile
-      // await xbit.sendBleSetGattNameCommand({
-      //   uuid: this.smpCharId,
-      //   name: 'smp',
-      //   deviceId: this.devicesStore.connected
-      // })
-      // this.smpCharId = 'smp'
-
-      await xbit.sendBleNotifyEnableCommand({
-        uuid: this.smpCharId,
-        deviceId: this.devicesStore.connected
-      })
-      this.settingUpSmp = false
-    },
-    async selectFile (event) {
-      const onLoad = async (fileResult) => {
-        try {
-          const info = await this.mcumgr.imageInfo(fileResult)
-          this.selectedFile.imageSize = info.imageSize
-          this.selectedFile.version = info.version
-          selectedFileData = fileResult
-          this.progressInfo = 'Firmware selected. Click "Upload Image" to begin.'
-          this.updateFirmwareAction = 'Upload Image'
-        } catch (error) {
-          // TODO invalid file?
-        }
-      }
-      const file = await event.target.files[0]
-      if (file) {
-        this.selectedFile = {
-          name: file.name,
-          size: file.size,
-          path: file.path,
-          lastModified: file.lastModified
-        }
-
-        if (!file.imageData) {
-          // read the file data
-          const reader = new FileReader()
-          reader.onload = async (e) => {
-            const fileResult = new Uint8Array(e.target.result)
-            onLoad(fileResult)
-          }
-          reader.readAsArrayBuffer(file)
-        } else {
-          onLoad(file.imageData)
-        }
-      }
-    },
     filePicker() {
-      console.log('opening filepicker on mobile')
       xbit.sendFilePickerCommand({
         accept: '.bin'
       })
     },
     deselectFile() {
-      selectedFileData = null
-      this.selectedFile = false
+      this.firmwareUpdateStore.deselectFile()
       try {
         // reset the file input
         this.$refs.fileInput.value = ''
       } catch (e) {
         // console.log('error resetting file input', e)
       }
-      this.updateFirmwareAction = 'Upload Image'
-    },
-    // main action button at the bottom of the screen
-    // triggers this function
-    async firmwareAction () {
-      // if already have a pending file, reset
-      if (!selectedFileData && this.pendingFile) {
-        return this.reset()
-      }
-
-      // if no file selected, do nothing
-      if (!selectedFileData) return
-
-      // otherwise, start the upload
-      this.mcumgr.cmdUpload(selectedFileData, 1)
-      this.uploading = true
     }
   }
 })

@@ -27,12 +27,14 @@ import { defineComponent } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
 import { xbit } from '@bennybtl/xbit-lib'
 import { useDevicesStore } from '@/stores/devices-store'
+import { useFirmwareUpdateStore } from '@/stores/firmware-update.store'
 
 export default defineComponent({
   name: 'AppMainView',
   setup () {
     return {
-      devicesStore: useDevicesStore()
+      devicesStore: useDevicesStore(),
+      firmwareUpdateStore: useFirmwareUpdateStore()
     }
   },
   mounted () {
@@ -66,6 +68,14 @@ export default defineComponent({
           await this.devicesStore.processDisconnect(data)
         } catch (e) {
           console.log('error processing disconnect', e)
+        }
+      }
+
+      if (data.method === 'bluetoothNotificationReceived') {
+        try {
+          await this.firmwareUpdateStore.processNotification(data)
+        } catch (e) {
+          console.log('error processing notification', e)
         }
       }
 
