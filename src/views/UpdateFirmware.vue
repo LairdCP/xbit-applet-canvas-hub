@@ -251,9 +251,13 @@ export default defineComponent({
       if (this.showAdvanced) return
       if (val === 0) {
         // advance to next state
-        this.stateAction()
+        setTimeout(() => {
+          this.stateAction()
+        }, 1000)
       } else if (val === 1) {
-        this.stateAction()
+        setTimeout(() => {
+          this.stateAction()
+        }, 1000)
       }
     })
     this.firmwareUpdateStore.setState(0)

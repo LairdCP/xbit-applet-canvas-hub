@@ -17,6 +17,7 @@ const states = [
     ready: false, // Can send the read image state command
     busy: false,
     actionText: 'Read Image State',
+    progressText: 'Reading Image State...',
     infoText: 'Read Image State to determine firmware status.',
   },
   {
@@ -32,7 +33,7 @@ const states = [
     ready: false,
     busy: false,
     actionText: 'Test Image',
-    infoText: 'Slot 2 has an valid image. Click "Test Image" to test it or upload a different image.',
+    infoText: 'Slot 2 has a valid image. Click "Test Image" to test it or upload a different image.',
   },
   {
     name: 'resetState',
@@ -47,14 +48,14 @@ const states = [
     ready: false,
     busy: false,
     actionText: 'Erase Image',
-    infoText: 'Slot 2 has an invalid image. Click "Erase Image" to erase it or upload a different image',
+    infoText: 'Slot 2 has a invalid image. Click "Erase Image" to erase it or upload a different image',
   },
   {
     name: 'validImageState',
     ready: false,
     busy: false,
     actionText: 'Confirm Image',
-    infoText: 'Slot 2 has an valid image. Click "Confirm Image" to confirm it or wait and the device will swap images back.',
+    infoText: 'Slot 2 has a valid image. Click "Confirm Image" to confirm it or wait and the device will swap images back.',
   },
   {
     name: 'finishedState',
@@ -103,7 +104,7 @@ export const useFirmwareUpdateStore = defineStore({
       this.state = id
     },
     resetStateMachine () {
-      this.state = 0
+      this.state = 10
       this.states = JSON.parse(JSON.stringify(states))
     },
     processNotification (event) {

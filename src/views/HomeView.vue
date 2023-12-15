@@ -1,5 +1,5 @@
 <template>
-  <div class="grow">
+  <div class="grow max-w-sm">
     <h3 class="p-2 m-4 text-white" v-if="devicesStore.devices.length === 0 && !devicesStore.scanningTimeout">Scan for BLE Devices  <i class="fa-solid fa-arrows-rotate"></i></h3>
     <h3 class="p-2 m-4 text-white" v-else>Select Device</h3>
     <div v-for="i in devicesStore.devices" :key="i.address"
