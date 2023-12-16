@@ -102,7 +102,7 @@ export class MCUManager {
     const length = lengthHi * 256 + lengthLo
     const group = groupHi * 256 + groupLo
 
-    console.log('mcumgr - Process Message - Group: ' + group + ', Id: ' + id + ', Off: ' + data.off)
+    // console.log('mcumgr - Process Message - Group: ' + group + ', Id: ' + id + ', Off: ' + data.off)
     if (group === constants.MGMT_GROUP_ID_IMAGE && id === constants.IMG_MGMT_ID_UPLOAD && data.off) {
       this._uploadOffset = data.off
       this._uploadNext()
@@ -162,7 +162,7 @@ export class MCUManager {
 
     const packet = this._getMessage(constants.MGMT_OP_WRITE, constants.MGMT_GROUP_ID_IMAGE, constants.IMG_MGMT_ID_UPLOAD, message)
 
-    console.log('mcumgr - _uploadNext: Message Length: ' + packet.length)
+    // console.log('mcumgr - _uploadNext: Message Length: ' + packet.length)
 
     this._imageUploadNextCallback({ packet })
   }

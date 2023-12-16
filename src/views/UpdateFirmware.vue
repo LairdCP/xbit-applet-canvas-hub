@@ -5,9 +5,9 @@
       <span class="p-2">
         Connected to {{ devicesStore.connected || '?'}}
       </span>
-      <button class="float-right p-2 rounded" @click="showAdvanced = !showAdvanced">
+      <!-- <button class="float-right p-2 rounded" @click="showAdvanced = !showAdvanced">
         <i class="fa-solid fa-glasses"></i>
-      </button>
+      </button> -->
     </h3>
     <div class="m-2" v-show="showAdvanced">
       <button class="bg-canvas-slate-600 text-white p-2 m-2 rounded disabled:opacity-25"
@@ -89,7 +89,7 @@
       </div>
     </div>
     <Transition name="fade" mode="out-in">
-      <div v-if="selectedFile" class="bg-canvas-slate-700 text-white p-2 m-2">
+      <div v-if="firmwareUpdateStore.selectedFile" class="bg-canvas-slate-700 text-white p-2 m-2">
         <h3>
           <i class="fa-solid fa-microchip py-2 my-2"></i> 
           Selected File
@@ -97,11 +97,11 @@
             <i class="fas fa-times"></i>
           </button>
         </h3>
-        <div>Version: {{ selectedFile.version }}</div>
-        <div>File Name: {{ selectedFile.name }}</div>
+        <div>Version: {{ firmwareUpdateStore.selectedFile.version }}</div>
+        <div>File Name: {{ firmwareUpdateStore.selectedFile.name }}</div>
         <!-- <div>File Path: {{ selectedFile.path }}</div> -->
-        <div>File Last Modified: {{ xbit.toDate(selectedFile.lastModified) }}</div>
-        <div>Image Size: {{ selectedFile.imageSize }}</div>
+        <div>File Last Modified: {{ xbit.toDate(firmwareUpdateStore.selectedFile.lastModified) }}</div>
+        <div>Image Size: {{ firmwareUpdateStore.selectedFile.imageSize }}</div>
       </div>
     </Transition>
     <div class="text-white m-2 p-2 bg-canvas-sky-700" v-if="firmwareUpdateStore.currentState.progressText && firmwareUpdateStore.currentState.busy">
@@ -224,9 +224,11 @@ export default defineComponent({
 
     // watch for device to disconnect and go back to home
     this.$watch('devicesStore.connected', async (val) => {
-      // if resetting
-      if (this.firmwareUpdateStore.states[4].busy) return
       if (!val) {
+        // if resetting
+        if (this.firmwareUpdateStore.resetting) return
+        if (!this.firmwareUpdateStore.uploading) this.firmwareUpdateStore.deselectFile()
+
         // set notification error
         xbit.sendToast({
           type: 'error',
@@ -247,7 +249,6 @@ export default defineComponent({
 
     // auto-advance the state machine
     this.$watch('firmwareUpdateStore.state', async (val) => {
-      console.log('state changed', val)
       if (this.showAdvanced) return
       if (val === 0) {
         // advance to next state
@@ -265,7 +266,7 @@ export default defineComponent({
   async beforeRouteLeave () {
     xbit.removeEventListener('jsonData', this.jsonDataListener)
 
-    if (this.uploading) {
+    if (this.firmwareUpdateStore.uploading) {
       xbit.sendToast({
         type: 'error',
         message: 'Uploading in progress, please wait.'

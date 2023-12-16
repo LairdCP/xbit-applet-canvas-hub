@@ -97,6 +97,12 @@ export const useFirmwareUpdateStore = defineStore({
     },
     nextState (state) {
       return state.states[state.state + 1]
+    },
+    uploading (state) {
+      return state.states[2].busy
+    },
+    resetting (state) {
+      return state.states[4].busy
     }
   },
   actions: {
@@ -280,6 +286,7 @@ export const useFirmwareUpdateStore = defineStore({
         this.currentState.busy = false 
         this.currentState.infoText = 'Upload complete.'
         // set to readState to update image list
+        this.deselectFile()
         this.setState(1)
       })
   
@@ -313,6 +320,8 @@ export const useFirmwareUpdateStore = defineStore({
     },
     async selectFile (event) {
       if (this.state !== 2) return
+      this.currentState.busy = true
+      this.currentState.progressText = 'Reading file...'
       const onLoad = async (fileResult) => {
         try {
           const info = await this.mcumgr.imageInfo(fileResult)
@@ -321,6 +330,7 @@ export const useFirmwareUpdateStore = defineStore({
           selectedFileData = fileResult
           this.currentState.infoText = 'Firmware selected. Click "Upload Image" to begin.'
           this.currentState.actionText = 'Upload Image'
+          this.currentState.busy = false
           this.currentState.ready = true
         } catch (error) {
           // TODO invalid file?

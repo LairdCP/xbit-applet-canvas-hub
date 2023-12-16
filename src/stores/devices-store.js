@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import { xbit } from '@bennybtl/xbit-lib'
+import { xbit, DiscoveredDevice} from '@bennybtl/xbit-lib'
 
 export const useDevicesStore = defineStore({
   id: 'devicesStore',
@@ -24,6 +24,11 @@ export const useDevicesStore = defineStore({
     selectedDeviceAddress: (state) => {
       return state.selectedDevice?.address
     },
+    sortedDevices: (state) => {
+      return state.devices.sort((a, b) => {
+        return a.isCanvas ? 1 : 0
+      })
+    }
   },
   actions: {
     clear () {
@@ -94,21 +99,11 @@ export const useDevicesStore = defineStore({
 
       // const ad = event.params.data
       // check if device already exists
-      const device = this.devices.find(device => device.address === event.params.deviceId)
-      if (device) {
-        // update device
-        device.rssi = event.params.rssi
-        device.ad = event.params.ad
-        if (event.params.pduType) device.pduType = xbit.convertPduType(event.params.pduType)
+      let device = this.devices.find(device => device.address === event.params.deviceId)
+      if (!device) {
+        this.devices.push(new DiscoveredDevice(event.params))
       } else {
-        // add device
-        const newDevice = {
-          address: event.params.deviceId,
-          rssi: event.params.rssi,
-          ad: event.params.ad,
-        }
-        if (event.params.pduType) newDevice.pduType = xbit.convertPduType(event.params.pduType)
-        this.devices.push(newDevice)
+        device.update(event.params)
       }
     },
     selectDevice (device) {
