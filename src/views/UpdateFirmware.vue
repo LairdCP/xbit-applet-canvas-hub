@@ -1,6 +1,6 @@
 
 <template>
-  <div class="grow">
+  <div class="grow max-w-md mx-auto">
     <h3 class="m-2 text-white">
       <span class="p-2">
         Connected to {{ devicesStore.connected || '?'}}
@@ -60,8 +60,11 @@
             <i class="fa-solid fa-trash-can"></i>
           </button>
         </h3>
-        <div class="whitespace-nowrap">Version: {{ image.version }}</div>
-        <div v-if="!image.empty">
+        <div v-if="firmwareUpdateStore.erasing || firmwareUpdateStore.reading">
+          <i class="fa-solid fa-arrows-rotate fa-spin"></i>
+        </div>
+        <div v-else-if="!image.empty">
+          <div class="whitespace-nowrap">Version: {{ image.version }}</div>
           <div>Pending <i :class="{
             'fa-solid fa-circle-check': image.pending,
             'fa-regular fa-circle': !image.pending

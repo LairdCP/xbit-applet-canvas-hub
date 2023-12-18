@@ -1,9 +1,9 @@
 <template>
-  <div class="grow max-w-sm">
-    <h3 class="p-2 m-4 text-white" v-if="devicesStore.sortedDevices.length === 0 && !devicesStore.scanningTimeout">Scan for BLE Devices  <i class="fa-solid fa-arrows-rotate"></i></h3>
-    <h3 class="p-2 m-4 text-white" v-else>Select Device</h3>
+  <h3 class="p-2 mb-2 text-white" v-if="devicesStore.sortedDevices.length === 0 && !devicesStore.scanningTimeout">Scan for BLE Devices  <i class="fa-solid fa-arrows-rotate"></i></h3>
+  <h3 class="p-2 mb-2 text-white" v-else>Select Device</h3>
+  <div class="flex flex-col" style="flex: 1 1 auto; height: 100%; overflow-y: auto; overflow-x: hidden;">
     <div v-for="i in devicesStore.sortedDevices" :key="i.address"
-      class="bg-canvas-slate-500 p-2 m-4 rounded text-white text-center cursor-pointer hover:bg-canvas-slate-600"
+      class="bg-canvas-slate-500 p-2 mb-2 rounded text-white text-center cursor-pointer hover:bg-canvas-slate-600 mx-auto"
       :class="{
         'bg-canvas-sky-500': i.address === devicesStore.connected,
         'bg-canvas-slate-600': i.address === devicesStore.selected,
@@ -14,7 +14,7 @@
       <i v-if="i.address === devicesStore.selected" class="fas fa-check"></i>
     </div>
   </div>
-  <div class="action-button btn-gradient-1">
+  <div class="action-button btn-gradient-1" style="justify-self: flex-end;">
     <button @click="connectDevice(devicesStore.selected)"
       class="bg-canvas-slate-800 p-4 w-full h-full"
       :class="{

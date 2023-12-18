@@ -1,8 +1,8 @@
 <template>
   <!-- Main Header Componet -->
-  <div class="main-wrapper flex flex-col" style="height: 100vh;">
-    <div class="mb-2 p-4 bg-canvas-slate-800 text-white text-2xl">
-      <button @click="navigateBack" type="button" id="back-button" class="back-button gray-button mr-4">
+  <div id="main-wrapper" class="flex flex-col" style="height: 100vh;">
+    <div id="header" class="mb-2 p-4 bg-canvas-slate-800 text-white text-2xl">
+      <button v-show="viewName() !== 'Canvas Hub'" @click="navigateBack" type="button" id="back-button" class="back-button gray-button mr-4">
         <i class="fa fa-angle-left"></i>
       </button>
       <span>{{ viewName() }}</span>
@@ -10,15 +10,13 @@
         <i class="fa-solid fa-arrows-rotate" :class="{'fa-spin': devicesStore.scanningTimeout}"></i>
       </button>
     </div>
-    <div class="mb-2 device-list bg-canvas-slate-800 grow">
-      <router-view v-slot="{ Component, route }">
-        <Transition name="fade" mode="out-in">
-          <div :key="route.name" class="flex flex-col h-full">
-            <component :is="Component"></component>
-          </div>
-        </Transition>
-      </router-view>
-    </div>
+    <router-view v-slot="{ Component, route }">
+      <Transition name="fade" mode="out-in">
+        <div :key="route.name" class="mb-2 bg-canvas-slate-800 contents">
+          <component :is="Component"></component>
+        </div>
+      </Transition>
+    </router-view>
   </div>
 </template>
 

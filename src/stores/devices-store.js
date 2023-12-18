@@ -26,7 +26,7 @@ export const useDevicesStore = defineStore({
     },
     sortedDevices: (state) => {
       return state.devices.sort((a, b) => {
-        return a.isCanvas ? 1 : 0
+        return a.isCanvas ? -1 : 1
       })
     }
   },
@@ -65,7 +65,7 @@ export const useDevicesStore = defineStore({
       // send scan command
       try {
         const command = await xbit.sendStartBluetoothScanningCommand()
-        this.scanSessionId = command.i || command.id || null
+        this.scanSessionId = command?.i || command?.id || null
       } catch (error) {
         console.log('error', error)
         xbit.sendToast({

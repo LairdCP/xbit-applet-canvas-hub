@@ -98,16 +98,28 @@ export const useFirmwareUpdateStore = defineStore({
     nextState (state) {
       return state.states[state.state + 1]
     },
+    reading (state) {
+      return state.states[1].busy
+    },
     uploading (state) {
       return state.states[2].busy
     },
     resetting (state) {
       return state.states[4].busy
+    },
+    erasing (state) {
+      return state.states[5].busy
     }
   },
   actions: {
     setState (id) {
       this.state = id
+      // when changing to state 2, reset the upload info text
+
+      if (id === 2) {
+        this.currentState.infoText = 'Select a firmware file to upload to slot 2.'
+        this.deselectFile()
+      }
     },
     resetStateMachine () {
       this.state = 10
