@@ -1,7 +1,7 @@
 
 <template>
-  <div class="grow max-w-md mx-auto">
-    <h3 class="m-2 text-white">
+  <div class="grow max-w-md ml-4">
+    <h3 class="pl-4 p-2 mb-2 text-white btn-gradient-1">
       <span class="p-2">
         Connected to {{ devicesStore.connected || '?'}}
       </span>

@@ -1,7 +1,11 @@
 {
   "title": "Canvas Hub",
-  "name": "xbit-applet-hub",
-  "version": "0.0.0",
+  "name": "canvas-hub",
+  "version": "1.0.0",
+  "config": {
+    "full_description": "A hub for all your Canvas needs. Provides over-the-air firmware updates for Canvas devices using bluetooth.",
+    "image": "screenshot.png"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",

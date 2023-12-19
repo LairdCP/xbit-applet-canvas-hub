@@ -1,9 +1,9 @@
 <template>
-  <h3 class="p-2 mb-2 text-white" v-if="devicesStore.sortedDevices.length === 0 && !devicesStore.scanningTimeout">Scan for BLE Devices  <i class="fa-solid fa-arrows-rotate"></i></h3>
-  <h3 class="p-2 mb-2 text-white" v-else>Select Device</h3>
+  <h3 class="pl-4 p-2 mb-2 text-white btn-gradient-1" v-if="devicesStore.sortedDevices.length === 0 && !devicesStore.scanningTimeout">Scan for BLE Devices  <i class="fa-solid fa-arrows-rotate"></i></h3>
+  <h3 class="pl-4 p-2 mb-2 text-white btn-gradient-1" v-else>Select Device</h3>
   <div class="flex flex-col" style="flex: 1 1 auto; height: 100%; overflow-y: auto; overflow-x: hidden;">
     <div v-for="i in devicesStore.sortedDevices" :key="i.address"
-      class="bg-canvas-slate-500 p-2 mb-2 rounded text-white text-center cursor-pointer hover:bg-canvas-slate-600 mx-auto"
+      class="bg-canvas-slate-500 ml-4 p-2 mb-2 rounded text-white text-center cursor-pointer hover:bg-canvas-slate-600 max-w-sm"
       :class="{
         'bg-canvas-sky-500': i.address === devicesStore.connected,
         'bg-canvas-slate-600': i.address === devicesStore.selected,
