@@ -40,8 +40,8 @@ const states = [
     ready: false,
     busy: false,
     actionText: 'Reset Device',
-    infoText: 'The device will reset and swap firmware images. It will attempt to boot the new image, and if not successful, will revert to the previous image. This may take up to 2 minutes.',
-    progressText: 'The device is resetting and swapping firmware images.',
+    infoText: 'Press the Reset Device button to update to the new firmware image',
+    progressText: 'The device is resetting and swapping firmware images. It will attempt to boot the new image and if not successful, will revert to the previous image. This may take up to 2 minutes.',
   },
   {
     name: 'invalidImageState',
@@ -55,7 +55,7 @@ const states = [
     ready: false,
     busy: false,
     actionText: 'Confirm Image',
-    infoText: 'Slot 2 has a valid image. Click "Confirm Image" to confirm it or wait and the device will swap images back.',
+    infoText: 'Slot 1 has a valid image. Click "Confirm Image" to confirm it or wait and the device will swap images back.',
   },
   {
     name: 'finishedState',
@@ -86,6 +86,7 @@ export const useFirmwareUpdateStore = defineStore({
       selectedFile: null,
       readingImageState: false,
       pendingVersion: null,
+      errorText: null,
       smpCharId: 'DA2E7828-FBCE-4E01-AE9E-261174997C48',
       GUID_SMP: 'DA2E7828-FBCE-4E01-AE9E-261174997C48',
       GUID_SERVICE_SMP: '8D53DC1D-1DB7-4CD3-868B-8A527460AA84',
@@ -115,7 +116,7 @@ export const useFirmwareUpdateStore = defineStore({
     setState (id) {
       this.state = id
       // when changing to state 2, reset the upload info text
-
+      this.errorText = null
       if (id === 2) {
         this.currentState.infoText = 'Select a firmware file to upload to slot 2.'
         this.deselectFile()
@@ -144,7 +145,6 @@ export const useFirmwareUpdateStore = defineStore({
       }
       this.states[1].busy = false
       this.states[1].ready = true
-      // this.states[1].done = true
 
       // if slot 2 is empty, set state to uploadImageState
       if (this.images.length === 1) {
@@ -157,7 +157,13 @@ export const useFirmwareUpdateStore = defineStore({
           bootable: false
         })
         // switch to upload state
-        return this.setState(2)
+        this.setState(2)
+        if (this.pendingVersion) {
+          this.pendingVersion = null
+          // alert that the image failed and was automatically deleted
+          this.errorText = 'The image failed to boot and was automatically deleted by the firmware.'
+        }
+        return
       }
 
       if (this.images.length === 2) {
@@ -201,7 +207,6 @@ export const useFirmwareUpdateStore = defineStore({
             uuid: this.smpCharId,
             deviceId: devicesStore.connected
           })
-          // this.currentState.done = true
           this.states[4].ready = true
           return this.setState(4)
         } catch (error) {
@@ -245,14 +250,12 @@ export const useFirmwareUpdateStore = defineStore({
       })
 
       this.currentState.busy = false
-      // this.currentState.done = true
       this.nextState.ready = true
     },
     async readImageState () {
       if (this.state !== 1) return
 
       const devicesStore = useDevicesStore()
-      // this.states[1].done = false
       const sent = await xbit.sendBleWriteCommand({
         data: this.mcumgr.cmdImageState(),
         uuid: this.smpCharId,
@@ -281,6 +284,7 @@ export const useFirmwareUpdateStore = defineStore({
       if (this.state !== 2) return
       const devicesStore = useDevicesStore()
       this.currentState.busy = true
+      this.pendingVersion = null
       this.mcumgr.onImageUploadNext(async({ packet }) => {
         return await xbit.sendBleWriteCommand({
           data: packet,
@@ -331,7 +335,10 @@ export const useFirmwareUpdateStore = defineStore({
       }
     },
     async selectFile (event) {
-      if (this.state !== 2) return
+      if (this.state !== 2) {
+        this.setState(2)
+      }
+
       this.currentState.busy = true
       this.currentState.progressText = 'Reading file...'
       const onLoad = async (fileResult) => {
@@ -373,6 +380,7 @@ export const useFirmwareUpdateStore = defineStore({
     deselectFile () {
       this.selectedFile = null
       selectedFileData = null
+      this.setState(1)
     }
   }
 })

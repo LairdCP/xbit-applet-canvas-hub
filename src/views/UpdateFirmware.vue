@@ -1,14 +1,14 @@
 
 <template>
-  <div class="grow max-w-md ml-4">
-    <h3 class="pl-4 p-2 mb-2 text-white btn-gradient-1">
-      <span class="p-2">
-        Connected to {{ devicesStore.connected || '?'}}
-      </span>
-      <!-- <button class="float-right p-2 rounded" @click="showAdvanced = !showAdvanced">
-        <i class="fa-solid fa-glasses"></i>
-      </button> -->
-    </h3>
+  <h3 class="pl-4 p-2 mb-2 text-white btn-gradient-1">
+    <span class="p-2">
+      Connected to {{ devicesStore.connected || '?'}}
+    </span>
+    <!-- <button class="float-right p-2 rounded" @click="showAdvanced = !showAdvanced">
+      <i class="fa-solid fa-glasses"></i>
+    </button> -->
+  </h3>
+  <div class="grow max-w-md pl-4">
     <div class="m-2" v-show="showAdvanced">
       <button class="bg-canvas-slate-600 text-white p-2 m-2 rounded disabled:opacity-25"
         :disabled="firmwareUpdateStore.states[0].busy || !firmwareUpdateStore.states[0].ready"
@@ -86,7 +86,7 @@
             @click="firmwareUpdateStore.imageTest">
             Set Pending
           </button> -->
-          <label class="bg-canvas-slate-600 text-white p-2 rounded cursor-pointer block text-center" for="fileInput" @click="filePicker"><i class="fa-solid fa-file-code"></i> Image</label>
+          <label class="bg-canvas-slate-600 text-white p-2 rounded cursor-pointer block text-center" for="fileInput" @click="filePicker"><i class="fa-solid fa-file-code"></i> Update Image</label>
           <input type="file" id="fileInput" @change="firmwareUpdateStore.selectFile" class="hidden" accept=".bin">
         </div>
       </div>
@@ -114,6 +114,10 @@
     <div class="text-white m-2 p-2 bg-canvas-sky-700" v-else>
       {{ firmwareUpdateStore.currentState.infoText }}
     </div>
+    <div class="text-white m-2 p-2 bg-canvas-pink-300" v-if="firmwareUpdateStore.errorText">
+      {{ firmwareUpdateStore.currentState.errorText }}
+    </div>
+
     <!-- <div class="text-white">
       {{ firmwareUpdateStore.currentState }}
     </div> -->
