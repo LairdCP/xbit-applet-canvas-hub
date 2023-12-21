@@ -75,20 +75,20 @@ export const useDevicesStore = defineStore({
       }
     },
     processConnect (event) {
-      if (this.connectingState?.deviceId === event.params.deviceId) {
-        this.connected = event.params.deviceId
+      if (this.connectingState?.deviceAddress === event.params.deviceAddress) {
+        this.connected = event.params.deviceAddress
         clearTimeout(this.connectingState.timeout)
         this.connectingState.resolve(this.connected)
         this.connectingState = null
       }
     },
     processDisconnect (event) {
-      if (this.disconnectingState?.deviceId === event.params.deviceId) {
+      if (this.disconnectingState?.deviceAddress === event.params.deviceAddress) {
         clearTimeout(this.disconnectingState.timeout)
         this.disconnectingState.resolve(this.connected)
         this.disconnectingState = null
         this.connected = null
-      } else if (this.connected === event.params.deviceId) {
+      } else if (this.connected === event.params.deviceAddress) {
         this.connected = null
       } else {
         // ignore ?
@@ -99,7 +99,7 @@ export const useDevicesStore = defineStore({
 
       // const ad = event.params.data
       // check if device already exists
-      let device = this.devices.find(device => device.address === event.params.deviceId)
+      let device = this.devices.find(device => device.address === event.params.deviceAddress)
       if (!device) {
         this.devices.push(new DiscoveredDevice(event.params))
       } else {
@@ -134,11 +134,11 @@ export const useDevicesStore = defineStore({
         // this command returns immediately if successful
         // but it's not yet actually connected
         await xbit.sendBluetoothConnectCommand({
-          deviceId: device.address
+          deviceAddress: device.address
         })
         // now in connecting state while waiting for the connection
         this.connectingState = {
-          deviceId: this.selected
+          deviceAddress: this.selected
         }
         const aPromise = new Promise((resolve, reject) => {
           const timeout = setTimeout(() => {
@@ -163,7 +163,7 @@ export const useDevicesStore = defineStore({
           return Promise.resolve()
         }
         this.disconnectingState = {
-          deviceId: this.selected
+          deviceAddress: this.selected
         }
         const aPromise = new Promise((resolve, reject) => {
           const timeout = setTimeout(() => {

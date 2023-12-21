@@ -343,7 +343,7 @@ export default defineComponent({
       await xbit.sendBleWriteCommand({
         data: this.firmwareUpdateStore.mcumgr.cmdReset(),
         uuid: this.firmwareUpdateStore.smpCharId,
-        deviceId: this.devicesStore.connected
+        deviceAddress: this.devicesStore.connected
       })
       await this.devicesStore.startScanning(120 * 1000)
 

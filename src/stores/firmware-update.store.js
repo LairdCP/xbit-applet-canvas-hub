@@ -205,7 +205,7 @@ export const useFirmwareUpdateStore = defineStore({
           await xbit.sendBleWriteCommand({
             data: this.mcumgr.cmdImageTest(this.images[1].hash),
             uuid: this.smpCharId,
-            deviceId: devicesStore.connected
+            deviceAddress: devicesStore.connected
           })
           this.states[4].ready = true
           return this.setState(4)
@@ -222,7 +222,7 @@ export const useFirmwareUpdateStore = defineStore({
       this.currentState.busy = true
 
       const dictionaryResponse = await xbit.sendBleGetGattDictionaryCommand({
-        deviceId: devicesStore.connected
+        deviceAddress: devicesStore.connected
       })
 
       this.smpCharId = null
@@ -246,7 +246,7 @@ export const useFirmwareUpdateStore = defineStore({
 
       await xbit.sendBleNotifyEnableCommand({
         uuid: this.smpCharId,
-        deviceId: devicesStore.connected
+        deviceAddress: devicesStore.connected
       })
 
       this.currentState.busy = false
@@ -259,7 +259,7 @@ export const useFirmwareUpdateStore = defineStore({
       const sent = await xbit.sendBleWriteCommand({
         data: this.mcumgr.cmdImageState(),
         uuid: this.smpCharId,
-        deviceId: devicesStore.connected
+        deviceAddress: devicesStore.connected
       })
 
       if (!sent) {
@@ -289,7 +289,7 @@ export const useFirmwareUpdateStore = defineStore({
         return await xbit.sendBleWriteCommand({
           data: packet,
           uuid: this.GUID_SMP,
-          deviceId: devicesStore.connected
+          deviceAddress: devicesStore.connected
         })
       })
   
@@ -315,7 +315,7 @@ export const useFirmwareUpdateStore = defineStore({
       await xbit.sendBleWriteCommand({
         data: this.mcumgr.cmdImageErase(),
         uuid: this.smpCharId,
-        deviceId: devicesStore.connected
+        deviceAddress: devicesStore.connected
       })
       this.states[5].busy = false
       this.setState(1)
@@ -329,7 +329,7 @@ export const useFirmwareUpdateStore = defineStore({
         await xbit.sendBleWriteCommand({
           data,
           uuid: this.smpCharId,
-          deviceId: devicesStore.connected
+          deviceAddress: devicesStore.connected
         })
         this.setState(1)
       }
