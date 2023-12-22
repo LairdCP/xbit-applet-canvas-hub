@@ -10,6 +10,7 @@ const states = [
     ready: true, // no initialization required. Can send the detect command
     busy: false, // this state is busy
     actionText: 'Detect SMP',
+    progressText: 'Detecting SMP service...',
     infoText: 'Request GATT SMP service to determine if device is SMP capable.',
   },
   {
@@ -157,6 +158,7 @@ export const useFirmwareUpdateStore = defineStore({
           bootable: false
         })
         // switch to upload state
+        console.log('switch to upload state')
         this.setState(2)
         if (this.pendingVersion) {
           this.pendingVersion = null
@@ -254,6 +256,7 @@ export const useFirmwareUpdateStore = defineStore({
     },
     async readImageState () {
       if (this.state !== 1) return
+      this.states[1].busy = true
 
       const devicesStore = useDevicesStore()
       const sent = await xbit.sendBleWriteCommand({
@@ -263,9 +266,9 @@ export const useFirmwareUpdateStore = defineStore({
       })
 
       if (!sent) {
+        this.states[1].busy = false
         throw new Error('Failed to send command')
       }
-      this.states[1].busy = true
       this.readingImageState = {}
       const aPromise = new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
@@ -380,7 +383,7 @@ export const useFirmwareUpdateStore = defineStore({
     deselectFile () {
       this.selectedFile = null
       selectedFileData = null
-      this.setState(1)
+      // this.setState(1)
     }
   }
 })

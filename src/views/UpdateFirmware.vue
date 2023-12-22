@@ -115,7 +115,7 @@
       {{ firmwareUpdateStore.currentState.infoText }}
     </div>
     <div class="text-white m-2 p-2 bg-canvas-pink-300" v-if="firmwareUpdateStore.errorText">
-      {{ firmwareUpdateStore.currentState.errorText }}
+      {{ firmwareUpdateStore.errorText }}
     </div>
 
     <!-- <div class="text-white">
@@ -323,6 +323,7 @@ export default defineComponent({
         this.firmwareUpdateStore.imageConfirm()
       } else if (this.firmwareUpdateStore.state === 7) {
         // done, disconnect
+        this.$router.back()
       }
     },
     nextState() {
