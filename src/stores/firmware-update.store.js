@@ -228,15 +228,12 @@ export const useFirmwareUpdateStore = defineStore({
       })
 
       this.smpCharId = null
-      for (const service in dictionaryResponse.j) {
-        if (dictionaryResponse.j[service].UUID.toUpperCase() === this.GUID_SERVICE_SMP) {
-          for (const characteristic in dictionaryResponse.j[service]) {
-            if (/^Characteristic/.test(characteristic) &&
-              dictionaryResponse.j[service][characteristic].UUID) {
-              if (dictionaryResponse.j[service][characteristic].UUID.toUpperCase() === this.GUID_SMP) {
-                this.smpCharId = this.GUID_SMP
-                break;
-              }
+      for (const service of dictionaryResponse.services) {
+        if (service.serviceUuid.toUpperCase() === this.GUID_SERVICE_SMP) {
+          for (const characteristic of service.characteristics) {
+            if (characteristic.characteristicUuid.toUpperCase() === this.GUID_SMP) {
+              this.smpCharId = this.GUID_SMP
+              break;
             }
           }
         }
