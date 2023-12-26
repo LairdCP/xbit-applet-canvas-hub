@@ -43,9 +43,15 @@ export const useDevicesStore = defineStore({
         this.scanningTimeout = null
         return this.scanningTimeout
       } catch (error) {
+        if (error === 'usbDevice is undefined') {
+          error = 'No Xbit USB Device selected and connected.'
+        }
         xbit.sendToast({
           type: 'error',
-          message: error.message
+          message: error,
+          options: {
+            timeout: 10000
+          }
         })
         return true
       }
@@ -67,10 +73,17 @@ export const useDevicesStore = defineStore({
         const command = await xbit.sendStartBluetoothScanningCommand()
         this.scanSessionId = command?.i || command?.id || null
       } catch (error) {
-        console.log('error', error)
+        clearTimeout(this.scanningTimeout)
+        this.scanningTimeout = null
+        if (error === 'usbDevice is undefined') {
+          error = 'No Xbit USB Device selected and connected.'
+        }
         xbit.sendToast({
           type: 'error',
-          message: error.message
+          message: error,
+          options: {
+            timeout: 10000
+          }
         })
       }
     },
