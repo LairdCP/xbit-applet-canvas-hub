@@ -9,7 +9,7 @@ export const useDevicesStore = defineStore({
       devices: [],
       connected: null,
       selected: null,
-      scanSessionId: null,
+      // scanSessionId: null,
       connectingState: null,
       disconnectingState: null
     }
@@ -71,7 +71,7 @@ export const useDevicesStore = defineStore({
       // send scan command
       try {
         const command = await xbit.sendStartBluetoothScanningCommand()
-        this.scanSessionId = command?.i || command?.id || null
+        // this.scanSessionId = command?.i || command?.id || null
       } catch (error) {
         clearTimeout(this.scanningTimeout)
         this.scanningTimeout = null
@@ -108,7 +108,7 @@ export const useDevicesStore = defineStore({
       }
     },
     processAd (event) {
-      if (event.id !== this.scanSessionId) return
+      // if (event.id !== this.scanSessionId) return
 
       // const ad = event.params.data
       // check if device already exists
