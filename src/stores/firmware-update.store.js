@@ -27,7 +27,7 @@ const states = [
     busy: false,
     actionText: 'Upload Image',
     progressText: '',
-    infoText: 'Select a firmware file to upload to slot 2.',
+    infoText: 'Select a firmware update image to upload to slot 2.',
   },
   {
     name: 'readyImageState',

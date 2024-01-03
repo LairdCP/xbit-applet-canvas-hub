@@ -1,5 +1,34 @@
-/* global crypto */
-// https://github.com/boogie/mcumgr-web/blob/main/js/mcumgr.js
+/*
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2023 Laird Connectivity
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+/**
+ * @file mcumgr.js
+ * @brief Provides MCU manager operation functions for the Xbit USB Shell.
+ * This file is inspired by the MIT licensed mcumgr.js file originally 
+ * authored by Andras Barthazi (https://github.com/boogie/mcumgr-web),
+ * updated to also support file upload/download over SMP.
+ */
 
 import { CBOR } from './cbor.js'
 
@@ -36,7 +65,10 @@ export const constants = {
   IMG_MGMT_ID_FILE: 2,
   IMG_MGMT_ID_CORELIST: 3,
   IMG_MGMT_ID_CORELOAD: 4,
-  IMG_MGMT_ID_ERASE: 5
+  IMG_MGMT_ID_ERASE: 5,
+
+  // Filesystem group
+  FS_MGMT_ID_FILE: 0
 }
 
 export class MCUManager {
@@ -45,7 +77,10 @@ export class MCUManager {
     this._messageCallback = null
     this._imageUploadProgressCallback = null
     this._imageUploadNextCallback = null
+    this._fileUploadProgressCallback = null
+    this._fileUploadNextCallback = null
     this._uploadIsInProgress = false
+    this._downloadIsInProgress = false
     this._buffer = new Uint8Array()
     this._logger = di.logger || { info: console.log, error: console.error }
     this._seq = 0
@@ -71,6 +106,36 @@ export class MCUManager {
     return this
   }
 
+  onFileUploadNext (callback) {
+    this._fileUploadNextCallback = callback
+    return this
+  }
+
+  onFileUploadProgress (callback) {
+    this._fileUploadProgressCallback = callback
+    return this
+  }
+
+  onFileUploadFinished (callback) {
+    this._fileUploadFinishedCallback = callback
+    return this
+  }
+
+  onFileDownloadNext (callback) {
+    this._fileDownloadNextCallback = callback
+    return this
+  }
+
+  onFileDownloadProgress (callback) {
+    this._fileDownloadProgressCallback = callback
+    return this
+  }
+
+  onFileDownloadFinished (callback) {
+    this._fileDownloadFinishedCallback = callback
+    return this
+  }
+
   _getMessage (op, group, id, data) {
     const _flags = 0
     let encodedData = []
@@ -88,6 +153,7 @@ export class MCUManager {
   }
 
   _notification (buffer) {
+    //console.log('mcumgr - message received')
     const message = new Uint8Array(buffer)
     this._buffer = new Uint8Array([...this._buffer, ...message])
     const messageLength = this._buffer[2] * 256 + this._buffer[3]
@@ -102,12 +168,31 @@ export class MCUManager {
     const length = lengthHi * 256 + lengthLo
     const group = groupHi * 256 + groupLo
 
-    // console.log('mcumgr - Process Message - Group: ' + group + ', Id: ' + id + ', Off: ' + data.off)
+    //console.log('mcumgr - Process Message - Group: ' + group + ', Id: ' + id + ', Off: ' + data.off)
     if (group === constants.MGMT_GROUP_ID_IMAGE && id === constants.IMG_MGMT_ID_UPLOAD && data.off) {
       this._uploadOffset = data.off
       this._uploadNext()
       return
     }
+    if (op === constants.MGMT_OP_WRITE_RSP && group === constants.MGMT_GROUP_ID_FS && id === constants.FS_MGMT_ID_FILE && data.off) {
+      this._uploadFileOffset = data.off
+      this._uploadFileNext()
+      return
+    }
+    if (op === constants.MGMT_OP_READ_RSP && group === constants.MGMT_GROUP_ID_FS && id === constants.FS_MGMT_ID_FILE) {
+      this._downloadFileOffset += data.data.length
+      if(data.len != undefined) {
+        this._downloadFileLength = data.len
+      }
+      //console.log('downloaded ' + this._downloadFileOffset + ' bytes of ' + this._downloadFileLength)
+      if(this._downloadFileLength > 0) {
+        this._fileDownloadProgressCallback({ percentage: Math.floor(this._downloadFileOffset / this._downloadFileLength * 100) })
+      }
+      if (this._messageCallback) this._messageCallback({ op, group, id, data, length })
+      this._downloadFileNext()
+      return
+    }
+    
     if (this._messageCallback) this._messageCallback({ op, group, id, data, length })
   }
 
@@ -162,7 +247,7 @@ export class MCUManager {
 
     const packet = this._getMessage(constants.MGMT_OP_WRITE, constants.MGMT_GROUP_ID_IMAGE, constants.IMG_MGMT_ID_UPLOAD, message)
 
-    // console.log('mcumgr - _uploadNext: Message Length: ' + packet.length)
+    //console.log('mcumgr - _uploadNext: Message Length: ' + packet.length)
 
     this._imageUploadNextCallback({ packet })
   }
@@ -180,6 +265,82 @@ export class MCUManager {
 
     this._uploadNext()
   }
+
+  async cmdUploadFile (filebuf, destFilename) {
+    if (this._uploadIsInProgress) {
+      this._logger.error('Upload is already in progress.')
+      return
+    }
+    this._uploadIsInProgress = true
+    this._uploadFileOffset = 0
+    this._uploadFile = filebuf
+    this._uploadFilename = destFilename
+
+    this._uploadFileNext()
+  }
+  
+  async _uploadFileNext () {
+    //console.log('uploadFileNext - offset: ' + this._uploadFileOffset + ', length: ' + this._uploadFile.byteLength)
+
+    if (this._uploadFileOffset >= this._uploadFile.byteLength) {
+      this._uploadIsInProgress = false
+      this._fileUploadFinishedCallback()
+      return
+    }
+
+    const nmpOverhead = 8
+    const message = { data: new Uint8Array(), off: this._uploadFileOffset }
+    if (this._uploadFileOffset === 0) {
+      message.len = this._uploadFile.byteLength
+    }
+    message.name = this._uploadFilename
+    this._fileUploadProgressCallback({ percentage: Math.floor(this._uploadFileOffset / this._uploadFile.byteLength * 100) })
+
+    const length = this._mtu - CBOR.encode(message).byteLength - nmpOverhead
+
+    message.data = new Uint8Array(this._uploadFile.slice(this._uploadFileOffset, this._uploadFileOffset + length))
+
+    this._uploadFileOffset += length
+
+    const packet = this._getMessage(constants.MGMT_OP_WRITE, constants.MGMT_GROUP_ID_FS, constants.FS_MGMT_ID_FILE, message)
+
+    //console.log('mcumgr - _uploadNext: Message Length: ' + packet.length)
+
+    this._fileUploadNextCallback({ packet })
+  }  
+
+  async cmdDownloadFile (filename, destFilename) {
+    if (this._downloadIsInProgress) {
+      this._logger.error('Download is already in progress.')
+      return
+    }
+    this._downloadIsInProgress = true
+    this._downloadFileOffset = 0
+    this._downloadFileLength = 0
+    this._downloadRemoteFilename = filename
+    this._downloadLocalFilename = destFilename
+
+    this._downloadFileNext()
+  }
+
+  async _downloadFileNext () {
+    if(this._downloadFileLength > 0) {
+      if (this._downloadFileOffset >= this._downloadFileLength) {
+        this._downloadIsInProgress = false
+        this._fileDownloadFinishedCallback()
+        return
+      }
+    }
+
+    const message = { off: this._downloadFileOffset }
+    if (this._downloadFileOffset === 0) {
+      message.name = this._downloadRemoteFilename
+    }
+
+    const packet = this._getMessage(constants.MGMT_OP_READ, constants.MGMT_GROUP_ID_FS, constants.FS_MGMT_ID_FILE, message)
+    //console.log('mcumgr - _downloadNext: Message Length: ' + packet.length)
+    this._fileDownloadNextCallback({ packet })
+  }  
 
   async imageInfo (image) {
     const info = {}

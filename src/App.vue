@@ -6,13 +6,13 @@
         <i class="fa fa-angle-left"></i>
       </button>
       <span>{{ viewName() }}</span>
-      <button v-if="$route.name === 'home'" @click="devicesStore.startScanning()" type="button" id="refresh-button" class="mr-4 float-right">
+      <button v-if="$route.name === 'scan'" @click="devicesStore.startScanning()" type="button" id="refresh-button" class="mr-4 float-right">
         <i class="fa-solid fa-arrows-rotate" :class="{'fa-spin': devicesStore.scanningTimeout}"></i>
       </button>
     </div>
     <router-view v-slot="{ Component, route }">
       <Transition name="fade" mode="out-in">
-        <div :key="route.name" class="mb-2 bg-canvas-slate-800 contents">
+        <div :key="route.name" class="mb-2 bg-canvas-slate-800 flex flex-col grow">
           <component :is="Component"></component>
         </div>
       </Transition>
@@ -98,7 +98,7 @@ export default defineComponent({
       // if in the process of connecting, don't allow back navigation
       if (this.devicesStore.connectingState) return
 
-      if (this.$router.currentRoute.name === 'home') {
+      if (this.$router.currentRoute.name === 'scan') {
         xbit.sendCommand({
           method: 'closeApplet'
         })
@@ -107,7 +107,7 @@ export default defineComponent({
       }
     },
     viewName () {
-      if (!this.$route.name || this.$route.name === 'home') {
+      if (!this.$route.name || this.$route.name === 'scan') {
         return 'Canvas Hub'
       }
       // captialize first letter of this.$router.currentRoute.name and return

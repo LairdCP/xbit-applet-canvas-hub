@@ -2,7 +2,7 @@
 <template>
   <h3 class="pl-4 p-2 mb-2 text-white btn-gradient-1">
     <span class="p-2">
-      Connected to {{ devicesStore.connected || '?'}}
+      Connected to {{ xbit.formatAddress(devicesStore.connected)}}
     </span>
     <!-- <button class="float-right p-2 rounded" @click="showAdvanced = !showAdvanced">
       <i class="fa-solid fa-glasses"></i>
@@ -51,7 +51,7 @@
         Reset
       </button>
     </div>
-    <div class="flex flex-row w-full">
+    <div class="flex max-[575px]:flex-col w-full">
       <div v-for="image in firmwareUpdateStore.images" :key="image.slot" class="p-2 m-2 text-white bg-canvas-slate-700 grow">
         <h3><i class="fa-solid fa-microchip py-2 my-2"></i> Slot {{ image.slot + 1 }} 
           <button v-if="image.slot === 1 && !uploading && !image.empty"
@@ -145,7 +145,7 @@ import { useFirmwareUpdateStore } from '@/stores/firmware-update.store'
 let selectedFileData = null
 
 export default defineComponent({
-  name: 'HomeView',
+  name: 'UpdateFirmwareView',
   setup () {
     const GUID_SMP = 'DA2E7828-FBCE-4E01-AE9E-261174997C48'
     return {
@@ -182,7 +182,7 @@ export default defineComponent({
   async mounted () {
 
     if (!this.devicesStore.connected) {
-      this.$router.push({ name: 'home' })
+      this.$router.push({ name: 'scan' })
     }
 
     this.firmwareUpdateStore.mcumgr.onMessage(async ({ op, group, id, data, length }) => {
@@ -229,7 +229,7 @@ export default defineComponent({
     xbit.addEventListener('bluetoothNotificationReceived', this.jsonDataListener)
     xbit.addEventListener('filePickerSelected', this.jsonDataListener)
 
-    // watch for device to disconnect and go back to home
+    // watch for device to disconnect and go back to scan
     this.$watch('devicesStore.connected', async (val) => {
       if (!val) {
         // if resetting
@@ -246,7 +246,7 @@ export default defineComponent({
           await this.devicesStore.connectDevice(this.devicesStore.selected)
         } else {
           // try to reconnect
-          this.$router.push({ name: 'home' })
+          this.$router.push({ name: 'scan' })
         }
       } else {
         // set notification success
@@ -281,14 +281,6 @@ export default defineComponent({
       return false
     }
 
-    if (this.devicesStore.connected) {
-      // disconnect from the device
-      const connected = await this.devicesStore.disconnectDevice()
-      // else there was a problem disconnecting. what to do?
-      if (connected !== null) {
-        // display error
-      }
-    }
     // reset the state machine for next time
     this.firmwareUpdateStore.resetStateMachine()
   },

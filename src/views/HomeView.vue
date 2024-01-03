@@ -1,32 +1,32 @@
 <template>
-  <h3 class="pl-4 p-2 mb-2 text-white btn-gradient-1" v-if="devicesStore.sortedDevices.length === 0 && !devicesStore.scanningTimeout">Scan for BLE Devices  <i class="fa-solid fa-arrows-rotate"></i></h3>
-  <h3 class="pl-4 p-2 mb-2 text-white btn-gradient-1" v-else>Select Device</h3>
+    <h3 class="pl-4 p-2 mb-2 text-white btn-gradient-1">
+    <span class="p-2">
+      Connected to {{ xbit.formatAddress(devicesStore.connected) }}
+    </span>
+    <!-- <button class="float-right p-2 rounded" @click="showAdvanced = !showAdvanced">
+      <i class="fa-solid fa-glasses"></i>
+    </button> -->
+  </h3>
   <div class="flex flex-col" style="flex: 1 1 auto; height: 100%; overflow-y: auto; overflow-x: hidden;">
-    <div v-for="i in devicesStore.sortedDevices" :key="i.address"
-      class="bg-canvas-slate-500 ml-4 p-2 mb-2 rounded text-white text-center cursor-pointer hover:bg-canvas-slate-600 max-w-sm"
-      :class="{
-        'bg-canvas-sky-500': i.address === devicesStore.connected,
-        'bg-canvas-slate-600': i.address === devicesStore.selected,
-        'opacity-25': !i.isCanvas
-      }"
-      @click="selectDevice(i)">
-      <span v-if="i.isCanvas">Canvas </span>Device {{ formatAddress(i.address) }}, {{ i.rssi }} dBm
-      <i v-if="i.address === devicesStore.selected" class="fas fa-check"></i>
-    </div>
+    <button @click="$router.push({ name: 'update' })"
+      class="bg-canvas-slate-500 ml-4 p-2 mb-2 rounded text-white text-center hover:bg-canvas-slate-600 max-w-sm"
+    >Firmware Update</button>
+    <button @click="$router.push({ name: 'upload' })"
+      class="bg-canvas-slate-500 ml-4 p-2 mb-2 rounded text-white text-center hover:bg-canvas-slate-600 max-w-sm"
+    >Upload File</button>
   </div>
   <div class="action-button btn-gradient-1" style="justify-self: flex-end;">
-    <button @click="connectDevice(devicesStore.selected)"
+    <button @click="disconnectDevice(devicesStore.selected)"
       class="bg-canvas-slate-800 p-4 w-full h-full"
       :class="{
         'text-white cursor-pointer': devicesStore.selected,
         'text-gray-600 cursor-not-allowed': !devicesStore.selected
       }"
       :disabled="!devicesStore.selected">
-      Continue
+      Disconnect
     </button>
   </div>
 </template>
-
 <script>
 import { defineComponent } from 'vue'
 import { xbit } from '@bennybtl/xbit-lib'
@@ -36,76 +36,47 @@ export default defineComponent({
   name: 'HomeView',
   setup () {
     return {
-      devicesStore: useDevicesStore()
+      devicesStore: useDevicesStore(),
+      xbit
     }
   },
-  async beforeRouteLeave () {
-    // stop scanning
-    const scanning = await this.devicesStore.stopScanning()
-    return scanning === null
-    // else there was a problem disconnecting. what to do
-
-    // disconnect from the device
-  },
-  async mounted () {
-    this.devicesStore.clear()
-    await this.devicesStore.disconnectDevice()
-
-    // send a ctrl+d
-    // reconnect to the dongle
-
-    // start scanning
-    const scanning = await this.devicesStore.startScanning()
-    // if (!scanning) {
-    //   // on failure...
-    // }
+  async beforeRouteLeave (to) {
+    if (this.devicesStore.connected && to.name === 'scan') {
+      // disconnect from the device
+      const connected = await this.devicesStore.disconnectDevice()
+      // else there was a problem disconnecting. what to do?
+      if (connected !== null) {
+        // display error
+      }
+    }
   },
   methods: {
-    formatAddress (address) {
-      // split the address by 2 characters
-      const split = address.match(/.{1,2}/g)
-      split.reverse()
-      split.pop()
-      // join the split address
-      return split.join('')
-    },
-    async selectDevice (device) {
-      this.devicesStore.selectDevice(device)
-    },
-    async connectDevice (device) {
+    async disconnectDevice () {
       xbit.sendToast({
-        message: 'Connecting...',
+        message: 'Disconnecting...',
         options: { autoClose: false }
       })
 
       if (this.devicesStore.connected) {
-        await this.devicesStore.disconnectDevice()
-        // 
-        // on failure to disconnect, do ...
       }
 
-      if (this.devicesStore.scanningTimeout) {
-        await this.devicesStore.stopScanning()
-        // on failure to stop scanning, do ...
-      }
-
-      this.$watch('devicesStore.connected', async (connected) => {
+      this.$watch('devicesStore.disconnected', async (connected) => {
         if (connected) {
           xbit.sendClearToast()
-          this.$router.push({ name: 'update' })
+          this.$router.push({ name: 'scan' })
         }
       })
 
       try {
-        await this.devicesStore.connectDevice(device)
+        await this.devicesStore.disconnectDevice()
       } catch (e) {
         console.log(e)
         xbit.sendToast({
           type: 'error',
-          message: 'Unable to connect'
+          message: 'Unable to disconnect'
         })
       }
-    },
+    }
   }
 })
 </script>

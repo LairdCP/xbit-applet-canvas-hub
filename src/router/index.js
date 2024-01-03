@@ -5,8 +5,18 @@ const router = createRouter({
   routes: [
     {
       path: '/',
+      name: 'scan',
+      component: () => import('../views/ScanView.vue')
+    },
+    {
+      path: '/home',
       name: 'home',
       component: () => import('../views/HomeView.vue')
+    },
+    {
+      path: '/upload',
+      name: 'upload',
+      component: () => import('../views/UploadFile.vue')
     },
     {
       path: '/update',
