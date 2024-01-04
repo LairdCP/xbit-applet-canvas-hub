@@ -1,6 +1,6 @@
 <template>
   <!-- Main Header Componet -->
-  <div id="main-wrapper" class="flex flex-col" style="height: 100vh;">
+  <div id="main-wrapper" class="flex flex-col" style="height: 100%;">
     <div id="header" class="mb-2 p-4 bg-canvas-slate-800 text-white text-2xl">
       <button v-show="viewName() !== 'Canvas Hub'" @click="navigateBack" type="button" id="back-button" class="back-button gray-button mr-4">
         <i class="fa fa-angle-left"></i>
@@ -12,9 +12,7 @@
     </div>
     <router-view v-slot="{ Component, route }">
       <Transition name="fade" mode="out-in">
-        <div :key="route.name" class="mb-2 bg-canvas-slate-800 flex flex-col grow">
-          <component :is="Component"></component>
-        </div>
+        <component :is="Component"></component>
       </Transition>
     </router-view>
   </div>
