@@ -11,9 +11,7 @@
       </button>
     </div>
     <router-view v-slot="{ Component, route }">
-      <Transition name="fade" mode="out-in">
-        <component :is="Component"></component>
-      </Transition>
+      <component :is="Component"></component>
     </router-view>
   </div>
 </template>

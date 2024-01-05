@@ -86,7 +86,9 @@
             @click="firmwareUpdateStore.imageTest">
             Set Pending
           </button> -->
-          <label class="bg-canvas-slate-600 text-white p-2 rounded cursor-pointer block text-center" for="fileInput" @click="filePicker"><i class="fa-solid fa-file-code"></i> Update Image</label>
+          <label class="bg-canvas-slate-600 text-white p-2 rounded cursor-pointer block text-center" for="fileInput" @click="filePicker">
+            <i class="fa-solid fa-file-code"></i> Select Update Image To Upload
+          </label>
           <input type="file" id="fileInput" @change="firmwareUpdateStore.selectFile" class="hidden" accept=".bin">
         </div>
       </div>

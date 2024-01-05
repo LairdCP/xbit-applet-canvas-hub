@@ -287,6 +287,7 @@ export const useFirmwareUpdateStore = defineStore({
       const devicesStore = useDevicesStore()
       this.currentState.busy = true
       this.pendingVersion = null
+      this.onNextTime = Date.now()
 
       this.mcumgr.onImageUploadNext(async({ packet }) => {
         clearTimeout(this.nextPacketTimeout)
@@ -313,11 +314,12 @@ export const useFirmwareUpdateStore = defineStore({
       })
   
       this.mcumgr.onImageUploadProgress(({ percentage }) => {
-        this.currentState.progressText = 'Uploading... ' + percentage + '%'
+        this.currentState.progressText = `Uploading... ${percentage}% (${this.lastTimeToSend}ms)`
         // TODO update progress bar
       })
   
       this.mcumgr.onImageUploadFinished(async () => {
+        clearTimeout(this.nextPacketTimeout)
         this.currentState.busy = false 
         this.currentState.infoText = 'Upload complete.'
         // set to readState to update image list
