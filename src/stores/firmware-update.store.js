@@ -91,8 +91,10 @@ export const useFirmwareUpdateStore = defineStore({
       smpCharId: 'DA2E7828-FBCE-4E01-AE9E-261174997C48',
       GUID_SMP: 'DA2E7828-FBCE-4E01-AE9E-261174997C48',
       GUID_SERVICE_SMP: '8D53DC1D-1DB7-4CD3-868B-8A527460AA84',
-      lastTimeToSend: 0,
-      onNextTime: 0
+      timer1: 0,
+      timer1Result: 0,
+      timer2: 0,
+      timer2Result: 0
     }
   },
   getters: {
@@ -160,7 +162,6 @@ export const useFirmwareUpdateStore = defineStore({
           bootable: false
         })
         // switch to upload state
-        console.log('switch to upload state')
         this.setState(2)
         if (this.pendingVersion) {
           this.pendingVersion = null
@@ -196,6 +197,9 @@ export const useFirmwareUpdateStore = defineStore({
           return this.setState(4)
         }
       }
+
+      // unknown image state
+      this.errorText = 'The image slots are an unknown size: ' + this.images.length
     },
     async imageTest () {
       const devicesStore = useDevicesStore()
@@ -229,19 +233,25 @@ export const useFirmwareUpdateStore = defineStore({
         deviceAddress: devicesStore.connected
       })
 
-      this.smpCharId = null
-      for (const service of dictionaryResponse.services) {
-        if (service.serviceUuid.toUpperCase() === this.GUID_SERVICE_SMP) {
-          for (const characteristic of service.characteristics) {
-            if (characteristic.characteristicUuid.toUpperCase() === this.GUID_SMP) {
-              this.smpCharId = this.GUID_SMP
-              break;
+      try {
+        this.smpCharId = null
+        for (const service of dictionaryResponse.services) {
+          if (service.serviceUuid.toUpperCase() === this.GUID_SERVICE_SMP) {
+            for (const characteristic of service.characteristics) {
+              if (characteristic.characteristicUuid.toUpperCase() === this.GUID_SMP) {
+                this.smpCharId = this.GUID_SMP
+                break;
+              }
             }
           }
         }
+      } catch (error) {
+        this.smpCharId = 'DA2E7828-FBCE-4E01-AE9E-261174997C48'
+        return Promise.reject(new Error('Failed to parse GATT dictionary'))
       }
 
       if (!this.smpCharId) {
+        this.smpCharId = 'DA2E7828-FBCE-4E01-AE9E-261174997C48'
         return Promise.reject(new Error('SMP not found'))
       }
 
@@ -304,8 +314,8 @@ export const useFirmwareUpdateStore = defineStore({
           }, 5000)
         }, 1000)
 
-        this.lastTimeToSend = Date.now() - this.onNextTime
-        this.onNextTime = Date.now()
+        this.timer1 = Date.now()
+        this.timer2Result = Date.now() - this.timer2
         return await xbit.sendBleWriteCommand({
           data: packet,
           uuid: this.GUID_SMP,
@@ -314,7 +324,7 @@ export const useFirmwareUpdateStore = defineStore({
       })
   
       this.mcumgr.onImageUploadProgress(({ percentage }) => {
-        this.currentState.progressText = `Uploading... ${percentage}% (${this.lastTimeToSend}ms)`
+        this.currentState.progressText = `Uploading... ${percentage}% 1(${this.timer1Result}ms), 2(${this.timer2Result}ms)`
         // TODO update progress bar
       })
   

@@ -67,6 +67,8 @@ export default defineComponent({
 
       if (data.method === 'bluetoothNotificationReceived') {
         try {
+          this.firmwareUpdateStore.timer1Result = Date.now() - this.firmwareUpdateStore.timer1
+          this.firmwareUpdateStore.timer2 = Date.now()
           await this.firmwareUpdateStore.processNotification(data)
         } catch (e) {
           console.log('error processing notification', e)
