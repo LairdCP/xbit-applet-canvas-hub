@@ -91,6 +91,8 @@ export const useFirmwareUpdateStore = defineStore({
       smpCharId: 'DA2E7828-FBCE-4E01-AE9E-261174997C48',
       GUID_SMP: 'DA2E7828-FBCE-4E01-AE9E-261174997C48',
       GUID_SERVICE_SMP: '8D53DC1D-1DB7-4CD3-868B-8A527460AA84',
+      lastTimeToSend: 0,
+      onNextTime: 0
     }
   },
   getters: {
@@ -285,7 +287,24 @@ export const useFirmwareUpdateStore = defineStore({
       const devicesStore = useDevicesStore()
       this.currentState.busy = true
       this.pendingVersion = null
+
       this.mcumgr.onImageUploadNext(async({ packet }) => {
+        clearTimeout(this.nextPacketTimeout)
+        this.nextPacketTimeout = setTimeout(() => {
+          // display error
+          this.errorText = 'Upload failed. Timeout receiving next packet notification. Please try again.'
+          // reset mcumgr
+          this.mcumgr.reset()
+
+          setTimeout(() => {
+            this.errorText = null
+            // disconnect
+            devicesStore.disconnectDevice()
+          }, 5000)
+        }, 1000)
+
+        this.lastTimeToSend = Date.now() - this.onNextTime
+        this.onNextTime = Date.now()
         return await xbit.sendBleWriteCommand({
           data: packet,
           uuid: this.GUID_SMP,

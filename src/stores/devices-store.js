@@ -28,6 +28,9 @@ export const useDevicesStore = defineStore({
       return state.devices.sort((a, b) => {
         return a.isCanvas ? -1 : 1
       })
+    },
+    connecting: (state) => {
+      return state.connectingState !== null
     }
   },
   actions: {
@@ -105,6 +108,12 @@ export const useDevicesStore = defineStore({
         this.connected = null
       } else {
         // ignore ?
+      }
+
+      if (this.connectingState?.deviceAddress === event.params.deviceAddress) {
+        clearTimeout(this.connectingState.timeout)
+        this.connectingState.reject(new Error('Connection failed'))
+        this.connectingState = null
       }
     },
     processAd (event) {

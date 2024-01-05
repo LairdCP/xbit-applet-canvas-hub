@@ -251,6 +251,10 @@ export class MCUManager {
 
     this._imageUploadNextCallback({ packet })
   }
+  async reset () {
+    this._uploadIsInProgress = false
+    this._downloadIsInProgress = false
+  }
 
   async cmdUpload (image, slot = 0) {
     if (this._uploadIsInProgress) {
