@@ -8,7 +8,7 @@
       <i class="fa-solid fa-glasses"></i>
     </button> -->
   </h3>
-  <div class="grow max-w-md pl-4">
+  <div class="flex flex-col" style="flex: 1 1 auto; overflow-y: auto; overflow-x: hidden;">
     <div class="m-2" v-show="showAdvanced">
       <button class="bg-canvas-slate-600 text-white p-2 m-2 rounded disabled:opacity-25"
         :disabled="firmwareUpdateStore.states[0].busy || !firmwareUpdateStore.states[0].ready"
