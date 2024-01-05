@@ -18,10 +18,10 @@
     <button @click="connectDevice(devicesStore.selected)"
       class="bg-canvas-slate-800 p-4 w-full h-full"
       :class="{
-        'text-white cursor-pointer': devicesStore.selected,
-        'text-gray-600 cursor-not-allowed': !devicesStore.selected
+        'text-white cursor-pointer': devicesStore.selected && !devicesStore.connecting,
+        'text-gray-600 cursor-not-allowed': !devicesStore.selected || devicesStore.connecting
       }"
-      :disabled="!devicesStore.selected">
+      :disabled="!devicesStore.selected || devicesStore.connecting">
       Continue
     </button>
   </div>
@@ -41,12 +41,12 @@ export default defineComponent({
     }
   },
   async beforeRouteLeave () {
-    // stop scanning
+    // disconnect from the device
+    if (this.devicesStore.connecting) {
+      await this.devicesStore.disconnectDevice()
+    }
     const scanning = await this.devicesStore.stopScanning()
     return scanning === null
-    // else there was a problem disconnecting. what to do
-
-    // disconnect from the device
   },
   async mounted () {
     this.devicesStore.clear()
