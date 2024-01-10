@@ -95,7 +95,6 @@ export default defineComponent({
       deviceAddress: this.devicesStore.connected
     })
 
-    console.log('dictionaryResponse', dictionaryResponse)
     let smpCharId = null
     for (const service of dictionaryResponse.services) {
       if (service.serviceUuid.toUpperCase() === this.firmwareUpdateStore.GUID_SERVICE_SMP) {

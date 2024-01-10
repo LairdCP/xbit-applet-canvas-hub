@@ -94,7 +94,9 @@ export const useFirmwareUpdateStore = defineStore({
       timer1: 0,
       timer1Result: 0,
       timer2: 0,
-      timer2Result: 0
+      timer2Result: 0,
+      timer3: 0,
+      timer3Result: 0
     }
   },
   getters: {
@@ -218,7 +220,7 @@ export const useFirmwareUpdateStore = defineStore({
           this.states[4].ready = true
           return this.setState(4)
         } catch (error) {
-          console.log(error)
+          console.error(error)
         } finally {
           this.currentState.busy = false
         }
@@ -316,15 +318,17 @@ export const useFirmwareUpdateStore = defineStore({
 
         this.timer1 = Date.now()
         this.timer2Result = Date.now() - this.timer2
-        return await xbit.sendBleWriteCommand({
+        this.timer3 = Date.now()
+        await xbit.sendBleWriteCommand({
           data: packet,
           uuid: this.GUID_SMP,
           deviceAddress: devicesStore.connected
         })
+        this.timer3Result = Date.now() - this.timer3
       })
   
       this.mcumgr.onImageUploadProgress(({ percentage }) => {
-        this.currentState.progressText = `Uploading... ${percentage}% 1(${this.timer1Result}ms), 2(${this.timer2Result}ms)`
+        this.currentState.progressText = `Uploading... ${percentage}%`
         // TODO update progress bar
       })
   

@@ -43,7 +43,7 @@ export default defineComponent({
         try {
           await this.devicesStore.processAd(data)
         } catch (e) {
-          console.log('error processing ad', e)
+          console.error('error processing ad', e)
         }
       }
 
@@ -53,7 +53,7 @@ export default defineComponent({
         try {
           await this.devicesStore.processConnect(data)
         } catch (e) {
-          console.log('error processing connect', e)
+          console.error('error processing connect', e)
         }
       }
       // TODO move this to xbit.lib
@@ -61,7 +61,7 @@ export default defineComponent({
         try {
           await this.devicesStore.processDisconnect(data)
         } catch (e) {
-          console.log('error processing disconnect', e)
+          console.error('error processing disconnect', e)
         }
       }
 
@@ -71,7 +71,7 @@ export default defineComponent({
           this.firmwareUpdateStore.timer2 = Date.now()
           await this.firmwareUpdateStore.processNotification(data)
         } catch (e) {
-          console.log('error processing notification', e)
+          console.error('error processing notification', e)
         }
       }
 
@@ -81,12 +81,12 @@ export default defineComponent({
         try {
           await this.devicesStore.disconnectDevice()
         } catch (e) {
-          console.log('error disconnecting device', e)
+          console.error('error disconnecting device', e)
         }
         try {
           await this.devicesStore.stopScanning()
         } catch (e) {
-          console.log('error stopping scanning', e)
+          console.error('error stopping scanning', e)
         }
       }
     })

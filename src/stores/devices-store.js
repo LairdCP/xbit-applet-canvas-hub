@@ -67,13 +67,17 @@ export const useDevicesStore = defineStore({
 
       // start timeout
       this.scanningTimeout = setTimeout(async () => {
-        // stop scan
-        this.stopScanning()
+        // scan should stop by itself but need to change state locally
+        this.scanningTimeout = null
+        await xbit.sendStopBluetoothScanningCommand()
       }, timeout)
 
       // send scan command
       try {
-        const command = await xbit.sendStartBluetoothScanningCommand()
+        const command = await xbit.sendStartBluetoothScanningCommand({
+          timeout,
+          active: 1
+        })
         // this.scanSessionId = command?.i || command?.id || null
       } catch (error) {
         clearTimeout(this.scanningTimeout)
@@ -126,7 +130,8 @@ export const useDevicesStore = defineStore({
       // check if device already exists
       let device = this.devices.find(device => device.address === event.params.deviceAddress)
       if (!device) {
-        this.devices.push(new DiscoveredDevice(event.params))
+        const newDevice = new DiscoveredDevice(event.params)
+        this.devices.push(newDevice)
       } else {
         device.update(event.params)
       }

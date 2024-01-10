@@ -4,53 +4,8 @@
     <span class="p-2">
       Connected to {{ xbit.formatAddress(devicesStore.connected)}}
     </span>
-    <!-- <button class="float-right p-2 rounded" @click="showAdvanced = !showAdvanced">
-      <i class="fa-solid fa-glasses"></i>
-    </button> -->
   </h3>
   <div class="flex flex-col" style="flex: 1 1 auto; overflow-y: auto; overflow-x: hidden;">
-    <div class="m-2" v-show="showAdvanced">
-      <button class="bg-canvas-slate-600 text-white p-2 m-2 rounded disabled:opacity-25"
-        :disabled="firmwareUpdateStore.states[0].busy || !firmwareUpdateStore.states[0].ready"
-        @click="firmwareUpdateStore.setupSmp">
-        <i class="fa-solid fa-arrows-rotate"
-         :class="{
-          'fa-spin': firmwareUpdateStore.states[0].busy,
-         }"></i>
-        {{ firmwareUpdateStore.states[0].actionText }}
-      </button>
-      <button class="bg-canvas-slate-600 text-white p-2 m-2 rounded disabled:opacity-25"
-        :disabled="firmwareUpdateStore.states[1].busy || !firmwareUpdateStore.states[1].ready"
-        @click="firmwareUpdateStore.readImageState">
-        <i class="fa-solid fa-arrows-rotate"
-         :class="{
-          'fa-spin': firmwareUpdateStore.states[1].busy,
-         }"></i>
-        {{ firmwareUpdateStore.states[1].actionText }}
-      </button>
-      <button class="bg-canvas-slate-600 text-white p-2 m-2 rounded disabled:opacity-25"
-        :disabled="firmwareUpdateStore.states[3].busy || !firmwareUpdateStore.states[3].ready"
-        @click="firmwareUpdateStore.imageTest">
-        <i class="fa-solid fa-arrows-rotate"
-         :class="{
-          'fa-spin': firmwareUpdateStore.states[3].busy,
-         }"></i>
-        {{ firmwareUpdateStore.states[3].actionText }}
-      </button>
-      <button class="bg-canvas-slate-600 text-white p-2 m-2 rounded disabled:opacity-25" @click="imageConfirm" :disabled="confirmButtonDisabled || confirmingImageState">
-        Image Confirm
-      </button>
-      <button class="bg-canvas-slate-600 text-white p-2 m-2 rounded disabled:opacity-25" @click="imageErase" :disabled="eraseButtonDisabled || erasingImage">
-        Image Erase
-      </button>
-      <button class="bg-canvas-slate-600 text-white p-2 m-2 rounded disabled:opacity-25" @click="reset" :disabled="resetting">
-        <i class="fa-solid fa-arrows-rotate"
-         :class="{
-          'fa-spin': resetting,
-         }"></i>
-        Reset
-      </button>
-    </div>
     <div class="flex max-[575px]:flex-col w-full">
       <div v-for="image in firmwareUpdateStore.images" :key="image.slot" class="p-2 m-2 text-white bg-canvas-slate-700 grow">
         <h3><i class="fa-solid fa-microchip py-2 my-2"></i> Slot {{ image.slot + 1 }} 
@@ -163,7 +118,6 @@ export default defineComponent({
       selectedFile: false,
       pendingFile: false,
 
-      showAdvanced: false,
       jsonDataListener: null,
       progressInfo: '',
       updateFirmwareAction: 'Update Firmware',
@@ -178,11 +132,10 @@ export default defineComponent({
 
       testButtonDisabled: true,
       confirmButtonDisabled: true,
-      eraseButtonDisabled: false,
+      eraseButtonDisabled: false
     }
   },
   async mounted () {
-
     if (!this.devicesStore.connected) {
       this.$router.push({ name: 'scan' })
     }
@@ -258,7 +211,6 @@ export default defineComponent({
 
     // auto-advance the state machine
     this.$watch('firmwareUpdateStore.state', async (val) => {
-      if (this.showAdvanced) return
       if (val === 0) {
         // advance to next state
         setTimeout(() => {
@@ -302,7 +254,7 @@ export default defineComponent({
           // next state is set based on the image state
           // to 2, 3, 4 or 5
         } catch (e) {
-          console.log('error reading image state', e)
+          console.error('error reading image state', e)
         }
 
       } else if (this.firmwareUpdateStore.state === 2) {
@@ -365,7 +317,7 @@ export default defineComponent({
                 this.firmwareUpdateStore.setState(0)
 
               } catch (e) {
-                console.log('error resetting', e)
+                console.error('error resetting', e)
               }
               resolve()
               break

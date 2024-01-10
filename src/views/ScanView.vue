@@ -92,7 +92,7 @@ export default defineComponent({
       try {
         await this.devicesStore.connectDevice(device)
       } catch (e) {
-        console.log(e)
+        console.error(e)
         xbit.sendToast({
           type: 'error',
           message: 'Unable to connect'
