@@ -104,8 +104,10 @@ export const useDevicesStore = defineStore({
         this.disconnectingState.resolve(this.connected)
         this.disconnectingState = null
         this.connected = null
+        this.selected = null
       } else if (this.connected === event.params.deviceAddress) {
         this.connected = null
+        this.selected = null
       } else {
         // ignore ?
       }
@@ -114,6 +116,7 @@ export const useDevicesStore = defineStore({
         clearTimeout(this.connectingState.timeout)
         this.connectingState.reject(new Error('Connection failed'))
         this.connectingState = null
+        this.selected = null
       }
     },
     processAd (event) {
