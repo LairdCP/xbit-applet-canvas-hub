@@ -198,11 +198,11 @@ export const useDevicesStore = defineStore({
         return Promise.reject(error)
       }  
     },
-    async disconnectDevice (device = null) {
+    async disconnectDevice () {
       try {
         const result = await xbit.sendBluetoothDisconnectCommand()
         // if the device is not connected, return
-        if (result.e === 'NOCONN') {
+        if (result?.e === 'NOCONN') {
           return Promise.resolve()
         }
         this.disconnectingState = {

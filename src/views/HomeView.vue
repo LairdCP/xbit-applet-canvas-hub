@@ -43,11 +43,7 @@ export default defineComponent({
   async beforeRouteLeave (to) {
     if (this.devicesStore.connected && to.name === 'scan') {
       // disconnect from the device
-      const connected = await this.devicesStore.disconnectDevice()
-      // else there was a problem disconnecting. what to do?
-      if (connected !== null) {
-        // display error
-      }
+      await this.devicesStore.disconnectDevice()
     }
   },
   methods: {
