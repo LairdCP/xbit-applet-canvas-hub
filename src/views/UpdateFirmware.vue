@@ -2,11 +2,12 @@
 <template>
   <h3 class="pl-4 p-2 mb-2 text-white btn-gradient-1">
     <span class="p-2">
-      Connected to {{ xbit.formatAddress(devicesStore.connected)}}
+      <span v-if="devicesStore.connected">Connected to {{ xbit.formatAddress(devicesStore.connected) }}</span>
+      <span v-else>Scanning For Device {{ this.timeRemaining }}</span>
     </span>
   </h3>
-  <div class="flex flex-col" style="flex: 1 1 auto; overflow-y: auto; overflow-x: hidden;">
-    <div class="flex max-[575px]:flex-col w-full">
+  <div class="flex flex-col" style="flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; max-width: 48rem;">
+    <div class="flex max-[575px]:flex-col">
       <div v-for="image in firmwareUpdateStore.images" :key="image.slot" class="p-2 m-2 text-white bg-canvas-slate-700 grow">
         <h3><i class="fa-solid fa-microchip py-2 my-2"></i> Slot {{ image.slot + 1 }} 
           <button v-if="image.slot === 1 && !uploading && !image.empty"
@@ -132,12 +133,13 @@ export default defineComponent({
 
       testButtonDisabled: true,
       confirmButtonDisabled: true,
-      eraseButtonDisabled: false
+      eraseButtonDisabled: false,
+      timeRemaining: 0,
     }
   },
   async mounted () {
     if (!this.devicesStore.connected) {
-      this.$router.push({ name: 'scan' })
+      this.$router.replace({ name: 'scan' })
     }
 
     this.firmwareUpdateStore.mcumgr.onMessage(async ({ op, group, id, data, length }) => {
@@ -215,11 +217,11 @@ export default defineComponent({
         // advance to next state
         setTimeout(() => {
           this.stateAction()
-        }, 1000)
+        }, 100)
       } else if (val === 1) {
         setTimeout(() => {
           this.stateAction()
-        }, 1000)
+        }, 100)
       }
     })
     this.firmwareUpdateStore.setState(0)
@@ -262,14 +264,20 @@ export default defineComponent({
       } else if (this.firmwareUpdateStore.state === 3) {
         this.firmwareUpdateStore.imageTest()
       } else if (this.firmwareUpdateStore.state === 4) {
-        this.reset()
+        try {
+          this.reset()
+        } catch (e) {
+          console.error('error resetting', e)
+          // naviage back to scan
+          this.$router.replace({ name: 'scan' })
+        }
       } else if (this.firmwareUpdateStore.state === 5) {
         this.firmwareUpdateStore.eraseImage()
       } else if (this.firmwareUpdateStore.state === 6) {
         this.firmwareUpdateStore.imageConfirm()
       } else if (this.firmwareUpdateStore.state === 7) {
         // done, disconnect
-        this.$router.back()
+        this.$router.replace({ name: 'scan' })
       }
     },
     nextState() {
@@ -286,6 +294,7 @@ export default defineComponent({
       this.firmwareUpdateStore.currentState.busy = true
       // this.progressInfo = 'The device is resetting and swapping firmware images. It will attempt to boot the new image, and if not successful, will revert to the previous image. This may take up to 2 minutes.'
       // this.updateFirmwareAction = 'Resetting...'
+      const deviceAddressWatching = this.devicesStore.connected
 
       await xbit.sendBleWriteCommand({
         data: this.firmwareUpdateStore.mcumgr.cmdReset(),
@@ -297,32 +306,37 @@ export default defineComponent({
       return new Promise((resolve, reject) => {
         // watch devices for the device to come back
         const timeout = setTimeout(async () => {
-          await this.devicesStore.stopScanning(device)
+          await this.devicesStore.stopScanning()
           this.firmwareUpdateStore.currentState.busy = false
           // TODO Reset timed out. What to do?
           reject()
         }, 120 * 1000)
 
+        this.timeRemaining = 120
         const watchDevicesInterval = setInterval(async () => {
+          this.timeRemaining--
+          let reconnectDevice = null
+          // selected becomes undefined when the device disconnects
           for (const device of this.devicesStore.devices) {
-            if (device.address === this.devicesStore.selected) {
-              clearInterval(watchDevicesInterval)
-              clearTimeout(timeout)
-
-              this.firmwareUpdateStore.currentState.busy = false
-              try {
-                await this.devicesStore.stopScanning(device)
-                await this.devicesStore.connectDevice(device)
-
-                this.firmwareUpdateStore.setState(0)
-
-              } catch (e) {
-                console.error('error resetting', e)
-              }
-              resolve()
+            if (device.address === deviceAddressWatching) {
+              reconnectDevice = device
+              this.devicesStore.selectDevice(device)
               break
             }
           }
+          try {
+            if (reconnectDevice) {
+              clearInterval(watchDevicesInterval)
+              clearTimeout(timeout)
+              this.firmwareUpdateStore.currentState.busy = false
+              await this.devicesStore.stopScanning()
+              await this.devicesStore.connectDevice(reconnectDevice)
+              this.firmwareUpdateStore.setState(0)
+            }
+          } catch (e) {
+            console.error('error resetting', e)
+          }
+          resolve()
         }, 1000)
       })
     },

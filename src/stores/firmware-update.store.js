@@ -91,15 +91,14 @@ export const useFirmwareUpdateStore = defineStore({
       smpCharId: 'DA2E7828-FBCE-4E01-AE9E-261174997C48',
       GUID_SMP: 'DA2E7828-FBCE-4E01-AE9E-261174997C48',
       GUID_SERVICE_SMP: '8D53DC1D-1DB7-4CD3-868B-8A527460AA84',
-      timer1: 0,
-      timer1Result: 0,
       timer2: 0,
-      timer2Result: 0,
-      timer3: 0,
-      timer3Result: 0
+      kBPerSecondLog: [1.5]
     }
   },
   getters: {
+    kBPerSecond: (state) => {
+      return state.kBPerSecondLog.reduce((a, b) => a + b, 0) / state.kBPerSecondLog.length
+    },
     currentState (state) {
       return state.states[state.state]
     },
@@ -316,19 +315,22 @@ export const useFirmwareUpdateStore = defineStore({
           }, 5000)
         }, 1000)
 
-        this.timer1 = Date.now()
-        this.timer2Result = Date.now() - this.timer2
-        this.timer3 = Date.now()
+        const timeTaken = Date.now() - this.timer2
+        this.timer2 = Date.now()
+        this.kBPerSecondLog.push((this.mcumgr._mtu / 1024) / (timeTaken / 1000))
+        if (this.kBPerSecondLog.length > 30) {
+          this.kBPerSecondLog.shift()
+        }
+        console.log(this.kBPerSecondLog)
         await xbit.sendBleWriteCommand({
           data: packet,
           uuid: this.GUID_SMP,
           deviceAddress: devicesStore.connected
         })
-        this.timer3Result = Date.now() - this.timer3
       })
   
       this.mcumgr.onImageUploadProgress(({ percentage }) => {
-        this.currentState.progressText = `Uploading... ${percentage}%`
+        this.currentState.progressText = `Uploading... ${percentage}% (${this.kBPerSecond.toFixed(2)} kB/s)`
         // TODO update progress bar
       })
   
@@ -366,7 +368,7 @@ export const useFirmwareUpdateStore = defineStore({
           uuid: this.smpCharId,
           deviceAddress: devicesStore.connected
         })
-        this.setState(1)
+        this.setState(7)
       }
     },
     async selectFile (event) {

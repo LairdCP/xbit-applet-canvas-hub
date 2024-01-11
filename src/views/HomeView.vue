@@ -10,10 +10,10 @@
   <div class="flex flex-col" style="flex: 1 1 auto; height: 100%; overflow-y: auto; overflow-x: hidden;">
     <button @click="$router.push({ name: 'update' })"
       class="bg-canvas-slate-500 ml-4 p-2 mb-2 rounded text-white text-center hover:bg-canvas-slate-600 max-w-sm"
-    >Firmware Update</button>
+    ><i class="fa-solid fa-microchip py-2 my-2"></i> Firmware Update</button>
     <button @click="$router.push({ name: 'upload' })"
       class="bg-canvas-slate-500 ml-4 p-2 mb-2 rounded text-white text-center hover:bg-canvas-slate-600 max-w-sm"
-    >Upload File</button>
+    ><i class="fa-solid fa-file-code"></i> Upload File</button>
   </div>
   <div class="action-button btn-gradient-1" style="justify-self: flex-end;">
     <button @click="disconnectDevice(devicesStore.selected)"

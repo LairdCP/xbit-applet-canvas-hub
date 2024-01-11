@@ -60,17 +60,19 @@ export const useDevicesStore = defineStore({
       }
     },
     async startScanning (timeout = 5000) {
+      console.log('startScanning', timeout)
       if (this.scanningTimeout) {
         return this.stopScanning()
       }
       this.clear() 
 
-      // start timeout
-      this.scanningTimeout = setTimeout(async () => {
-        // scan should stop by itself but need to change state locally
-        this.scanningTimeout = null
-        await xbit.sendStopBluetoothScanningCommand()
-      }, timeout)
+      // start timeout unless it's 0
+      if (timeout !== 0) {
+        this.scanningTimeout = setTimeout(async () => {
+          // scan should stop by itself but need to change state locally
+          await this.stopScanning()
+        }, timeout)
+      }
 
       // send scan command
       try {
@@ -95,6 +97,7 @@ export const useDevicesStore = defineStore({
       }
     },
     processConnect (event) {
+      console.log('processConnect', event, this.connectingState)
       if (this.connectingState?.deviceAddress === event.params.deviceAddress) {
         this.connected = event.params.deviceAddress
         clearTimeout(this.connectingState.timeout)
@@ -103,7 +106,11 @@ export const useDevicesStore = defineStore({
       }
     },
     processDisconnect (event) {
-      if (this.disconnectingState?.deviceAddress === event.params.deviceAddress) {
+      console.log('processConnect', event)
+      if (!event) {
+        this.connected = null
+        this.selected = null
+      } else if (this.disconnectingState?.deviceAddress === event.params.deviceAddress) {
         clearTimeout(this.disconnectingState.timeout)
         this.disconnectingState.resolve(this.connected)
         this.disconnectingState = null
@@ -172,6 +179,12 @@ export const useDevicesStore = defineStore({
         }
         const aPromise = new Promise((resolve, reject) => {
           const timeout = setTimeout(() => {
+            // treat a timeout as a disconnect to clear state
+            this.processDisconnect({
+              params: {
+                deviceAddress: this.connectingState.deviceAddress
+              }
+            })
             reject(new Error('connectDevice Timeout'))
           }, 7500)
 
@@ -195,17 +208,19 @@ export const useDevicesStore = defineStore({
         this.disconnectingState = {
           deviceAddress: this.selected
         }
-        const aPromise = new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            reject(new Error('Timeout'))
-          }, 5000)
-
+        this.disconnectingState.promise = new Promise((resolve, reject) => {
           this.disconnectingState.resolve = resolve
           this.disconnectingState.reject = reject
-          this.disconnectingState.timeout = timeout
+          this.disconnectingState.timeout = setTimeout(() => {
+            this.processDisconnect({
+              params: {
+                deviceAddress: this.disconnectingState.deviceAddress
+              }
+            })  
+            reject(new Error('Timeout'))
+          }, 5000)
         })
-        this.disconnectingState.promise = aPromise
-        return aPromise
+        return this.disconnectingState.promise
       } catch (error) {
         xbit.sendToast({
           message: error.message,
