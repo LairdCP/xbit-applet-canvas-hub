@@ -203,6 +203,7 @@ export default defineComponent({
           await this.devicesStore.connectDevice(this.devicesStore.selected)
         } else {
           // try to reconnect
+          this.mfirmwareUpdateStore.mcumgr.reset()
           this.$router.push({ name: 'scan' })
         }
       } else {

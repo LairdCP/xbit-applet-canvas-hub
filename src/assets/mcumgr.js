@@ -252,8 +252,17 @@ export class MCUManager {
     this._imageUploadNextCallback({ packet })
   }
   async reset () {
+    this._mtu = 200
+    this._messageCallback = null
+    this._imageUploadProgressCallback = null
+    this._imageUploadNextCallback = null
+    this._fileUploadProgressCallback = null
+    this._fileUploadNextCallback = null
     this._uploadIsInProgress = false
     this._downloadIsInProgress = false
+    this._buffer = new Uint8Array()
+    this._logger = di.logger || { info: console.log, error: console.error }
+    this._seq = 0
   }
 
   async cmdUpload (image, slot = 0) {
