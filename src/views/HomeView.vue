@@ -56,9 +56,10 @@ export default defineComponent({
       if (this.devicesStore.connected) {
       }
 
-      this.$watch('devicesStore.disconnected', async (connected) => {
-        if (connected) {
+      this.$watch('devicesStore.connected', async (connected) => {
+        if (!connected) {
           xbit.sendClearToast()
+          console.log('disconnected')
           this.$router.push({ name: 'scan' })
         }
       })
