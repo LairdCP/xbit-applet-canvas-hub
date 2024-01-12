@@ -305,14 +305,13 @@ export const useFirmwareUpdateStore = defineStore({
         this.nextPacketTimeout = setTimeout(() => {
           // display error
           this.errorText = 'Upload failed. Timeout receiving next packet notification. Please try again.'
-          // reset mcumgr
-          this.mcumgr.reset()
 
           setTimeout(() => {
             this.errorText = null
-            // disconnect
+            // TODO
+            // Maybe this should be a toast instead
             devicesStore.disconnectDevice()
-          }, 5000)
+          }, 7500)
         }, 1000)
 
         const timeTaken = Date.now() - this.timer2

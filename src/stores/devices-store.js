@@ -97,7 +97,6 @@ export const useDevicesStore = defineStore({
       }
     },
     processConnect (event) {
-      console.log('processConnect', event, this.connectingState)
       if (this.connectingState?.deviceAddress === event.params.deviceAddress) {
         this.connected = event.params.deviceAddress
         clearTimeout(this.connectingState.timeout)
@@ -106,7 +105,6 @@ export const useDevicesStore = defineStore({
       }
     },
     processDisconnect (event) {
-      console.log('processConnect', event)
       if (!event) {
         this.connected = null
         this.selected = null
