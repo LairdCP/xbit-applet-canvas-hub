@@ -198,14 +198,9 @@ export default defineComponent({
           type: 'error',
           message: 'Disconnected'
         })
-        // if persist connection is enabled, try to reconnect
-        if (this.persistConnection) {
-          await this.devicesStore.connectDevice(this.devicesStore.selected)
-        } else {
-          // try to reconnect
-          this.mfirmwareUpdateStore.mcumgr.reset()
-          this.$router.push({ name: 'scan' })
-        }
+
+        this.mfirmwareUpdateStore.mcumgr.reset()
+        this.$router.push({ name: 'scan' })
       } else {
         // set notification success
         xbit.sendClearToast()

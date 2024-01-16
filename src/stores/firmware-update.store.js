@@ -308,9 +308,11 @@ export const useFirmwareUpdateStore = defineStore({
 
           setTimeout(() => {
             this.errorText = null
-            // TODO
-            // Maybe this should be a toast instead
-            devicesStore.disconnectDevice()
+            try {
+              devicesStore.disconnectDevice()
+            } catch (error) {
+              console.error(error)
+            }
           }, 7500)
         }, 1000)
 

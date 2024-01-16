@@ -43,7 +43,11 @@ export default defineComponent({
   async beforeRouteLeave (to) {
     if (this.devicesStore.connected && to.name === 'scan') {
       // disconnect from the device
-      await this.devicesStore.disconnectDevice()
+      try {
+        await this.devicesStore.disconnectDevice()
+      } catch (e) {
+        // console.error(e)
+      }
     }
   },
   methods: {
@@ -59,19 +63,13 @@ export default defineComponent({
       this.$watch('devicesStore.connected', async (connected) => {
         if (!connected) {
           xbit.sendClearToast()
-          console.log('disconnected')
           this.$router.push({ name: 'scan' })
         }
       })
-
       try {
         await this.devicesStore.disconnectDevice()
       } catch (e) {
-        console.error(e)
-        xbit.sendToast({
-          type: 'error',
-          message: 'Unable to disconnect'
-        })
+        // console.error(e)
       }
     }
   }

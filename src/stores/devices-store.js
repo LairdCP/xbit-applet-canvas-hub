@@ -60,7 +60,6 @@ export const useDevicesStore = defineStore({
       }
     },
     async startScanning (timeout = 5000) {
-      console.log('startScanning', timeout)
       if (this.scanningTimeout) {
         return this.stopScanning()
       }
@@ -76,11 +75,10 @@ export const useDevicesStore = defineStore({
 
       // send scan command
       try {
-        const command = await xbit.sendStartBluetoothScanningCommand({
+        await xbit.sendStartBluetoothScanningCommand({
           timeout,
           active: 1
         })
-        // this.scanSessionId = command?.i || command?.id || null
       } catch (error) {
         clearTimeout(this.scanningTimeout)
         this.scanningTimeout = null
@@ -120,13 +118,6 @@ export const useDevicesStore = defineStore({
       } else {
         // ignore ?
       }
-
-      if (this.connectingState?.deviceAddress === event.params.deviceAddress) {
-        clearTimeout(this.connectingState.timeout)
-        this.connectingState.reject(new Error('Connection failed'))
-        this.connectingState = null
-        this.selected = null
-      }
     },
     processAd (event) {
       // if (event.id !== this.scanSessionId) return
@@ -155,14 +146,22 @@ export const useDevicesStore = defineStore({
     // returns null if unsuccessful
     async connectDevice (device = null) {
       if (this.connectingState) {
+        // TODO
+        // if device.address !== this.connectingState.deviceAddress
+        // reject
         return this.connectingState.promise
       }
-      if (!device) {
-        device = this.selectedDevice
-      }
 
+      // if device is a string, find the device
       if (typeof device === 'string') {
         device = this.devices.find(d => d.address === device)
+      }
+
+      // if no device is pass, use the selected device
+      if (!device && this.selectedDevice) {
+        device = this.selectedDevice
+      } else if (!device) {
+        return Promise.reject(new Error('No device selected'))
       }
 
       try {
@@ -171,60 +170,86 @@ export const useDevicesStore = defineStore({
         await xbit.sendBluetoothConnectCommand({
           deviceAddress: device.address
         })
+
         // now in connecting state while waiting for the connection
         this.connectingState = {
           deviceAddress: this.selected
         }
-        const aPromise = new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            // treat a timeout as a disconnect to clear state
-            this.processDisconnect({
-              params: {
-                deviceAddress: this.connectingState.deviceAddress
-              }
-            })
-            reject(new Error('connectDevice Timeout'))
+        
+        // create a promise to handle the bleConnect event
+        // that should be coming
+        this.connectingState.promise = new Promise((resolve, reject) => {
+          // timeout if no bleConnect event is received
+          this.connectingState.timeout = setTimeout(() => {
+            this.connectingState.reject(new Error('Connect Device Timeout'))
           }, 7500)
 
           this.connectingState.resolve = resolve
-          this.connectingState.reject = reject
-          this.connectingState.timeout = timeout
+          this.connectingState.reject = (error) => {
+            // wrap the reject so we can do some other things
+            // like clear the timeout
+            // and send a toast
+            clearTimeout(this.connectingState.timeout)
+            this.connectingState = null
+            this.selected = null
+   
+            xbit.sendToast({
+              message: error?.message || error || 'Unable to connect',
+              type: 'error'
+            })    
+            reject(new Error('Connection failed'))
+          }
         })
-        this.connectingState.promise = aPromise
-        return aPromise
+
+        // store the promise so that if connectDevice is called during this
+        // this connection attemp, we can return it again
+        return this.connectingState.promise
       } catch (error) {
-        return Promise.reject(error)
+        xbit.sendToast({
+          message: error.message || error || 'Unable to connect',
+          type: 'error'
+        })
+        return Promise.reject()
       }  
     },
+    // method to disconnect from a ble device
     async disconnectDevice () {
       try {
-        const result = await xbit.sendBluetoothDisconnectCommand()
-        // if the device is not connected, return
-        if (result?.e === 'NOCONN') {
-          return Promise.resolve()
-        }
+        await xbit.sendBluetoothDisconnectCommand()
         this.disconnectingState = {
           deviceAddress: this.selected
         }
+
         this.disconnectingState.promise = new Promise((resolve, reject) => {
-          this.disconnectingState.resolve = resolve
-          this.disconnectingState.reject = reject
           this.disconnectingState.timeout = setTimeout(() => {
-            this.processDisconnect({
-              params: {
-                deviceAddress: this.disconnectingState.deviceAddress
-              }
-            })  
-            reject(new Error('Timeout'))
-          }, 5000)
+            this.connectingState.reject(new Error('Disconnect Device Timeout'))
+          }, 7500)  
+          this.disconnectingState.resolve = resolve
+          this.connectingState.reject = (error = null) => {
+            // wrap the reject so we can do some other things
+            // like clear the timeout
+            // and send a toast
+            clearTimeout(this.connectingState.timeout)
+            this.connectingState = null
+            this.selected = null
+   
+            xbit.sendToast({
+              message: error?.message || error || 'Unable to disconnect',
+              type: 'error'
+            })    
+            reject(new Error('Disconnection failed'))
+          }
         })
         return this.disconnectingState.promise
       } catch (error) {
-        xbit.sendToast({
-          message: error.message,
-          type: 'error'
-        })
-        return this.connected
+        if (error !== 'NOCONN') {
+          xbit.sendToast({
+            message: error.message || error || 'Unable to disconnect',
+            type: 'error'
+          })  
+          return Promise.reject()
+        }
+        return Promise.resolve()
       }  
     }
   }

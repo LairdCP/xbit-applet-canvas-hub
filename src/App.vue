@@ -79,7 +79,7 @@ export default defineComponent({
         try {
           await this.devicesStore.disconnectDevice()
         } catch (e) {
-          console.error('error disconnecting device', e)
+          // console.error(e)
         }
         try {
           await this.devicesStore.stopScanning()

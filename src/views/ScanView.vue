@@ -43,14 +43,22 @@ export default defineComponent({
   async beforeRouteLeave () {
     // disconnect from the device
     if (this.devicesStore.connecting) {
-      await this.devicesStore.disconnectDevice()
+      try {
+        await this.devicesStore.disconnectDevice()
+      } catch (e) {
+        // console.error(e)
+      }
     }
     const scanning = await this.devicesStore.stopScanning()
     return scanning === null
   },
   async mounted () {
     this.devicesStore.clear()
-    await this.devicesStore.disconnectDevice()
+    try {
+      await this.devicesStore.disconnectDevice()
+    } catch (e) {
+      // console.error(e)
+    }
 
     // send a ctrl+d
     // reconnect to the dongle
@@ -72,9 +80,12 @@ export default defineComponent({
       })
 
       if (this.devicesStore.connected) {
-        await this.devicesStore.disconnectDevice()
-        // 
-        // on failure to disconnect, do ...
+        try {
+          await this.devicesStore.disconnectDevice()
+        } catch (e) {
+          // on failure to disconnect, do ...
+          console.error(e)
+        }
       }
 
       if (this.devicesStore.scanningTimeout) {
@@ -93,10 +104,6 @@ export default defineComponent({
         await this.devicesStore.connectDevice(device)
       } catch (e) {
         console.error(e)
-        xbit.sendToast({
-          type: 'error',
-          message: 'Unable to connect'
-        })
       }
     },
   }
