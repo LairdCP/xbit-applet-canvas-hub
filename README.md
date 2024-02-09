@@ -1,6 +1,6 @@
-# hub
+# Canvas Hub Applet
 
-This template should help get you started developing with Vue 3 in Vite.
+This applet provides firmware update OTA (bluetooth) for Canvas enabled devices such as the Sera NX040. This applet runs in the Xbit Desktop Application and Xbit Mobile Application. When the applet is running in the Xbit Desktop Application, a BT654 USB dongle is required. Pre-transpiled versions of this applet are available in the Xbit Desktop Application and Xbit Mobile Application. This repository is for development purposes only.
 
 ## Recommended IDE Setup
 
