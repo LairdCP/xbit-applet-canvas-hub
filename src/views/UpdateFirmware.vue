@@ -165,22 +165,30 @@ export default defineComponent({
           }  
       })
 
-    this.jsonDataListener = (event) => {
+    this.jsonDataListener = (e) => {
       // Mobile app responds to file picker with this event
-      if (event.method === 'filePickerSelected') {
-        const event = {
+      if (e.method === "filePickerSelected") {
+        // convert the base64 string to a byte array
+        var binaryString = atob(e.params.imageData);
+        var bytes = new Uint8Array(binaryString.length);
+        for (var i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i)
+        }
+
+        const a = {
           target: {
             files: [
               {
-                name: event.params.name,
-                size: event.params.imageData.length,
+                name: e.params.name,
+                size: e.params.imageData.length,
+                imageData: bytes,
                 path: '',
                 lastModified: Date.now()
               }
             ]
           }
         }
-        this.selectFile(event)
+        this.firmwareUpdateStore.selectFile(a)
       }
     }
     xbit.addEventListener('bluetoothNotificationReceived', this.jsonDataListener)

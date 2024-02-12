@@ -1,7 +1,7 @@
 {
   "title": "Canvas Hub",
   "name": "canvas-hub",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Device Utilities",
   "config": {
     "full_description": "A hub to utilize common features of Canvas-enabled devices including over-the-air firmware updates and file uploads over Bluetooth.",
