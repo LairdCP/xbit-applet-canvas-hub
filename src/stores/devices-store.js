@@ -8,10 +8,8 @@ export const useDevicesStore = defineStore({
     return {
       devices: [],
       connected: null,
-      selected: null,
+      selected: null
       // scanSessionId: null,
-      connectingState: null,
-      disconnectingState: null
     }
   },
   getters: {
@@ -29,8 +27,8 @@ export const useDevicesStore = defineStore({
         return a.isCanvas ? -1 : 1
       })
     },
-    connecting: (state) => {
-      return state.connectingState !== null
+    connecting: () => {
+      return xbit.connectingState !== null
     }
   },
   actions: {
@@ -94,31 +92,6 @@ export const useDevicesStore = defineStore({
         })
       }
     },
-    processConnect (event) {
-      if (this.connectingState?.deviceAddress === event.params.deviceAddress) {
-        this.connected = event.params.deviceAddress
-        clearTimeout(this.connectingState.timeout)
-        this.connectingState.resolve(this.connected)
-        this.connectingState = null
-      }
-    },
-    processDisconnect (event) {
-      if (!event) {
-        this.connected = null
-        this.selected = null
-      } else if (this.disconnectingState?.deviceAddress === event.params.deviceAddress) {
-        clearTimeout(this.disconnectingState.timeout)
-        this.disconnectingState.resolve(this.connected)
-        this.disconnectingState = null
-        this.connected = null
-        this.selected = null
-      } else if (this.connected === event.params.deviceAddress) {
-        this.connected = null
-        this.selected = null
-      } else {
-        // ignore ?
-      }
-    },
     processAd (event) {
       // if (event.id !== this.scanSessionId) return
 
@@ -145,13 +118,6 @@ export const useDevicesStore = defineStore({
     // returns the connected device if successful
     // returns null if unsuccessful
     async connectDevice (device = null) {
-      if (this.connectingState) {
-        // TODO
-        // if device.address !== this.connectingState.deviceAddress
-        // reject
-        return this.connectingState.promise
-      }
-
       // if device is a string, find the device
       if (typeof device === 'string') {
         device = this.devices.find(d => d.address === device)
@@ -167,43 +133,10 @@ export const useDevicesStore = defineStore({
       try {
         // this command returns immediately if successful
         // but it's not yet actually connected
-        await xbit.sendBluetoothConnectCommand({
+        await xbit.bluetoothConnect({
           deviceAddress: device.address
         })
-
-        // now in connecting state while waiting for the connection
-        this.connectingState = {
-          deviceAddress: this.selected
-        }
-        
-        // create a promise to handle the bleConnect event
-        // that should be coming
-        this.connectingState.promise = new Promise((resolve, reject) => {
-          // timeout if no bleConnect event is received
-          this.connectingState.timeout = setTimeout(() => {
-            this.connectingState.reject(new Error('Connect Device Timeout'))
-          }, 7500)
-
-          this.connectingState.resolve = resolve
-          this.connectingState.reject = (error) => {
-            // wrap the reject so we can do some other things
-            // like clear the timeout
-            // and send a toast
-            clearTimeout(this.connectingState.timeout)
-            this.connectingState = null
-            this.selected = null
-   
-            xbit.sendToast({
-              message: error?.message || error || 'Unable to connect',
-              type: 'error'
-            })    
-            reject(new Error('Connection failed'))
-          }
-        })
-
-        // store the promise so that if connectDevice is called during this
-        // this connection attemp, we can return it again
-        return this.connectingState.promise
+        this.connected = device.address
       } catch (error) {
         xbit.sendToast({
           message: error.message || error || 'Unable to connect',
@@ -215,32 +148,8 @@ export const useDevicesStore = defineStore({
     // method to disconnect from a ble device
     async disconnectDevice () {
       try {
-        await xbit.sendBluetoothDisconnectCommand()
-        this.disconnectingState = {
-          deviceAddress: this.selected
-        }
-
-        this.disconnectingState.promise = new Promise((resolve, reject) => {
-          this.disconnectingState.timeout = setTimeout(() => {
-            this.connectingState.reject(new Error('Disconnect Device Timeout'))
-          }, 7500)  
-          this.disconnectingState.resolve = resolve
-          this.connectingState.reject = (error = null) => {
-            // wrap the reject so we can do some other things
-            // like clear the timeout
-            // and send a toast
-            clearTimeout(this.connectingState.timeout)
-            this.connectingState = null
-            this.selected = null
-   
-            xbit.sendToast({
-              message: error?.message || error || 'Unable to disconnect',
-              type: 'error'
-            })    
-            reject(new Error('Disconnection failed'))
-          }
-        })
-        return this.disconnectingState.promise
+        await xbit.bluetoothDisconnect()
+        this.connected = null
       } catch (error) {
         if (error !== 'NOCONN') {
           xbit.sendToast({

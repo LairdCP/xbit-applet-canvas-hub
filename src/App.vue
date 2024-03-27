@@ -47,24 +47,6 @@ export default defineComponent({
         }
       }
 
-      // TODO move this to xbit.lib
-      // if (data.params?.data?.m === 'bleConnect') {
-      if (data.method === 'bluetoothConnected') {
-        try {
-          await this.devicesStore.processConnect(data)
-        } catch (e) {
-          console.error('error processing connect', e)
-        }
-      }
-      // TODO move this to xbit.lib
-      if (data.method === 'bluetoothDisconnected') {
-        try {
-          await this.devicesStore.processDisconnect(data)
-        } catch (e) {
-          console.error('error processing disconnect', e)
-        }
-      }
-
       if (data.method === 'bluetoothNotificationReceived') {
         try {
           await this.firmwareUpdateStore.processNotification(data)

@@ -85,6 +85,11 @@ export default defineComponent({
         } catch (e) {
           // on failure to disconnect, do ...
           console.error(e)
+          this.devicesStore.selected = null
+          xbit.sendToast({
+            message: error?.message || error || 'Unable to disconnect',
+            type: 'error'
+          })
         }
       }
 
@@ -103,6 +108,11 @@ export default defineComponent({
       try {
         await this.devicesStore.connectDevice(device)
       } catch (e) {
+        this.devicesStore.selected = null
+        xbit.sendToast({
+          message: e?.message || e || 'Unable to connect',
+          type: 'error'
+        })
         console.error(e)
       }
     },
